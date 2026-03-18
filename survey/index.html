@@ -280,7 +280,8 @@ tbody td:first-child{text-align:center}
 <script>
 // ══ 範本系統 ══
 const TPL_KEY='survey_templates';
-let templates=JSON.parse(localStorage.getItem(TPL_KEY)||'[]');
+const DEFAULT_TPL=[{id:'default',label:'棧橋碼頭工程（範例）',company:'宏華營造股份有限公司',projectName:'「N-WH計畫」Ⅱ-D東側碼頭工程',location:'#4-#5棧橋碼頭',supervisor:'台灣世曦工程顧問股份有限公司',contractor:'宏華營造股份有限公司'}];
+let templates=JSON.parse(localStorage.getItem(TPL_KEY)||'null')||DEFAULT_TPL;
 let selectedTpl=null,editingTplId=null;
 function saveTplsToStorage(){localStorage.setItem(TPL_KEY,JSON.stringify(templates));}
 
@@ -303,9 +304,6 @@ function selectTpl(id){selectedTpl=templates.find(t=>t.id===id)||null;document.g
 function openTplModal(tpl=null){
   editingTplId=tpl?tpl.id:null;
   document.getElementById('tplModalTitle').textContent=tpl?'編輯範本':'新增範本';
-  ['Label','Company','ProjectName','Location','Supervisor','Contractor'].forEach(k=>{
-    document.getElementById('tpl'+k).value=tpl?.[k.toLowerCase()]||tpl?.[(k[0].toLowerCase()+k.slice(1))]||'';
-  });
   document.getElementById('tplLabel').value=tpl?.label||'';
   document.getElementById('tplCompany').value=tpl?.company||'';
   document.getElementById('tplProjectName').value=tpl?.projectName||'';
@@ -505,6 +503,7 @@ function openCompass(pid){
 }
 function closeCompass(){document.getElementById('compassModal').classList.remove('show');}
 document.getElementById('compassModal').addEventListener('click',function(e){if(e.target===this)closeCompass();});
+document.getElementById('tplModal').addEventListener('click',function(e){if(e.target===this)closeTplModal();});
 function drawCompass(dNcm,dEcm,horizCm,tolCm,isOver){
   const cvs=document.getElementById('compassCanvas'),ctx=cvs.getContext('2d');
   const W=cvs.width,H=cvs.height,cx=W/2,cy=H/2,R=100;
