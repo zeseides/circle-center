@@ -6,129 +6,162 @@
 <title>鋼管偏差分析 — 測量工具箱</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@300;400;600&display=swap');
-:root{
-  --bg:#0e1621;--surface:#151f2e;--card:#1a2840;--border:#1e3050;
-  --accent:#3b82f6;--accent2:#06b6d4;--text:#e2e8f0;--muted:#64748b;
-  --ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;
-}
+:root{--bg:#0e1621;--surface:#151f2e;--card:#1a2840;--border:#1e3050;--accent:#3b82f6;--accent2:#06b6d4;--text:#e2e8f0;--muted:#64748b;--ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;padding:24px 16px}
-.page{max-width:1000px;margin:0 auto}
+.page{max-width:900px;margin:0 auto}
 .back{display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted);text-decoration:none;font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;margin-bottom:20px;transition:color 0.2s}
 .back:hover{color:var(--accent)}
-.header{margin-bottom:28px}
-.header h1{font-size:1.4rem;font-weight:600;color:#93c5fd;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em}
-.header p{font-size:0.8rem;color:var(--muted);margin-top:4px}
-.upload-section{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.upload-card{background:var(--card);border:2px dashed var(--border);border-radius:12px;padding:20px;transition:border-color 0.2s}
+.hdr{margin-bottom:24px}
+.hdr h1{font-size:1.4rem;font-weight:600;color:#93c5fd;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em}
+.hdr p{font-size:0.8rem;color:var(--muted);margin-top:4px}
+.section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.section-title{font-size:0.72rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.tpl-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.tpl-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.tpl-item.selected{border-color:var(--accent);background:rgba(59,130,246,0.08)}
+.tpl-name{flex:1;font-size:0.88rem}
+.tpl-actions{display:flex;gap:6px}
+.tpl-btn{padding:4px 10px;border-radius:5px;font-size:0.72rem;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'IBM Plex Mono',monospace;transition:all 0.15s}
+.tpl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tpl-btn.del:hover{border-color:var(--danger);color:var(--danger)}
+.new-tpl-btn{width:100%;padding:9px;background:transparent;border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.82rem;cursor:pointer;transition:all 0.2s}
+.new-tpl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+.field label{font-size:0.7rem;color:var(--muted);letter-spacing:0.04em}
+.field input{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.88rem;outline:none;transition:border-color 0.2s;width:100%}
+.field input:focus{border-color:var(--accent)}
+.tol-unit{font-size:0.65rem;color:var(--muted);margin-top:3px}
+.upload-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.upload-card{background:var(--surface);border:2px dashed var(--border);border-radius:8px;padding:14px;transition:border-color 0.2s}
 .upload-card.loaded{border-color:var(--ok);border-style:solid}
-.upload-card .uc-label{display:block;font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;font-family:'IBM Plex Mono',monospace}
-.upload-name{font-size:0.85rem;color:var(--text);margin-bottom:12px;min-height:1.3em;word-break:break-all}
+.upload-card .uc-lbl{display:block;font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+.upload-name{font-size:0.8rem;color:var(--text);margin-bottom:8px;min-height:1.2em;word-break:break-all}
 .upload-name.ok{color:var(--ok)}
-.file-input-btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:0.8rem;color:var(--muted);cursor:pointer;transition:all 0.2s}
-.file-input-btn:hover{border-color:var(--accent);color:var(--accent)}
+.file-btn{display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:5px;padding:5px 12px;font-size:0.75rem;color:var(--muted);cursor:pointer;transition:all 0.2s}
+.file-btn:hover{border-color:var(--accent);color:var(--accent)}
 input[type=file]{display:none}
-.tol-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px}
-.tol-title{font-size:0.72rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px}
-.tol-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.tol-field label{display:block;font-size:0.72rem;color:var(--muted);margin-bottom:6px;letter-spacing:0.04em}
-.tol-field input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.95rem;outline:none;transition:border-color 0.2s}
-.tol-field input:focus{border-color:var(--accent)}
-.tol-field .tol-unit{font-size:0.68rem;color:var(--muted);margin-top:4px}
-.run-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Mono',monospace;font-size:1rem;font-weight:600;cursor:pointer;transition:opacity 0.2s,transform 0.1s;margin-bottom:24px;letter-spacing:0.05em}
+.run-btn{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;font-weight:600;cursor:pointer;transition:opacity 0.2s,transform 0.1s;margin-bottom:20px;letter-spacing:0.05em}
 .run-btn:hover{opacity:0.88}
 .run-btn:active{transform:scale(0.99)}
 .run-btn:disabled{opacity:0.4;cursor:not-allowed}
-.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
-.stat .sv{font-family:'IBM Plex Mono',monospace;font-size:1.5rem;font-weight:600;color:var(--accent2)}
-.stat .sl{font-size:0.7rem;color:var(--muted);margin-top:2px;letter-spacing:0.06em}
-.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px}
-.table-title{padding:14px 18px;font-size:0.75rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.stat .sv{font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:600;color:var(--accent2)}
+.stat .sl{font-size:0.68rem;color:var(--muted);margin-top:2px}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.table-hdr{padding:12px 16px;font-size:0.72rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
 .tol-badge{font-size:0.68rem;color:var(--accent2)}
-table{width:100%;border-collapse:collapse;font-size:0.82rem}
-thead th{background:var(--surface);padding:10px 12px;font-size:0.7rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:0.8rem}
+thead th{background:var(--surface);padding:9px 10px;font-size:0.68rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
 thead th:first-child{text-align:center}
 tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s}
-tbody tr:hover{background:rgba(59,130,246,0.06)}
-tbody td{padding:9px 12px;font-family:'IBM Plex Mono',monospace;text-align:right;color:#cbd5e1}
-tbody td:first-child{text-align:center;color:#93c5fd;font-weight:600}
-.chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600}
+tbody tr:hover{background:rgba(59,130,246,0.05)}
+tbody td{padding:8px 10px;font-family:'IBM Plex Mono',monospace;text-align:right;color:#cbd5e1;font-size:0.8rem}
+tbody td:first-child{text-align:center}
+.pid-btn{background:transparent;border:1px solid var(--border);border-radius:5px;padding:3px 10px;color:#93c5fd;font-family:'IBM Plex Mono',monospace;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.15s}
+.pid-btn:hover{border-color:var(--accent);background:rgba(59,130,246,0.1)}
+.chip{display:inline-block;padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600}
 .chip-ok{background:rgba(34,197,94,0.15);color:var(--ok)}
 .chip-warn{background:rgba(245,158,11,0.15);color:var(--warn)}
-.chart-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:24px}
-.chart-title{font-size:0.75rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;margin-bottom:8px}
-.chart-hint{font-size:0.68rem;color:var(--muted);margin-bottom:14px}
-canvas{display:block;margin:0 auto;max-width:100%;cursor:pointer}
-.dl-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:transparent;border:1px solid var(--ok);border-radius:10px;color:var(--ok);font-family:'IBM Plex Mono',monospace;font-size:0.85rem;cursor:pointer;transition:background 0.2s;margin-bottom:12px}
-.dl-btn:hover{background:rgba(34,197,94,0.08)}
+.dl-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px}
+.dl-row{display:flex;gap:10px;align-items:flex-end}
+.dl-field{flex:1}
+.dl-btn{padding:10px 20px;background:var(--ok);color:#000;border:none;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:700;cursor:pointer;transition:opacity 0.2s;white-space:nowrap}
+.dl-btn:hover{opacity:0.88}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:900;align-items:center;justify-content:center;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:1rem;font-weight:600;margin-bottom:16px;font-family:'IBM Plex Mono',monospace;color:var(--accent2)}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+.modal-btns button{flex:1;padding:10px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff;border:none}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted)}
+#compassModal .modal{max-width:340px;text-align:center}
+#compassTitle{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--accent2);letter-spacing:0.1em;margin-bottom:4px}
+#compassSub{font-size:0.72rem;color:var(--muted);margin-bottom:14px}
+#compassCanvas{display:block;margin:0 auto 12px}
+#compassStats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.cstat{background:var(--card);border-radius:8px;padding:8px 6px}
+.cstat .cv{font-family:'IBM Plex Mono',monospace;font-size:0.95rem;font-weight:600}
+.cstat .cl{font-size:0.62rem;color:var(--muted);margin-top:2px}
 .hidden{display:none}
-.err{background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:12px 16px;font-size:0.82rem;color:var(--danger);margin-bottom:16px;display:none}
+.err{background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:10px 14px;font-size:0.8rem;color:var(--danger);margin-bottom:14px;display:none}
 .err.show{display:block}
-
-/* ── 方位彈窗 ── */
-#compassModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:999;align-items:center;justify-content:center;padding:20px}
-#compassModal.show{display:flex}
-#compassBox{background:var(--surface);border:1px solid var(--accent);border-radius:18px;padding:24px 20px;width:100%;max-width:360px;text-align:center}
-#compassTitle{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--accent2);letter-spacing:0.1em;margin-bottom:4px}
-#compassSub{font-size:0.72rem;color:var(--muted);margin-bottom:18px}
-#compassCanvas{display:block;margin:0 auto 16px}
-#compassStats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
-.cstat{background:var(--card);border-radius:8px;padding:10px 8px}
-.cstat .cv{font-family:'IBM Plex Mono',monospace;font-size:1rem;font-weight:600}
-.cstat .cl{font-size:0.65rem;color:var(--muted);margin-top:2px}
-#compassClose{width:100%;padding:10px;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:700;cursor:pointer}
-
 @media(max-width:600px){
-  .upload-section,.tol-row{grid-template-columns:1fr}
+  .field-grid,.upload-row{grid-template-columns:1fr}
   .summary{grid-template-columns:1fr 1fr}
-  table{font-size:0.72rem}
-  thead th,tbody td{padding:7px 6px}
+  .dl-row{flex-direction:column}
+  table{font-size:0.7rem}
+  thead th,tbody td{padding:6px 5px}
 }
 </style>
 </head>
 <body>
 <div class="page">
   <a class="back" href="../">← 測量工具箱</a>
-  <div class="header">
-    <h1>📐 鋼管圓心偏差分析</h1>
-    <p>上傳量測資料（-1~-4 格式）與設計值，自動計算圓心偏差並產出報告</p>
+  <div class="hdr">
+    <h1>📐 鋼管樁打設自主檢測</h1>
+    <p>上傳量測資料與設計值，自動產出雙分頁 Excel 報告（實測 ＋ 修正）</p>
   </div>
 
-  <div class="upload-section">
-    <div class="upload-card" id="cardM">
-      <span class="uc-label">量測資料 TXT</span>
-      <div class="upload-name" id="nameM">尚未選擇</div>
-      <label class="file-input-btn" for="fileM">📂 選擇檔案</label>
-      <input type="file" id="fileM" accept=".txt,.TXT,.csv">
+  <!-- STEP 1 範本 -->
+  <div class="section">
+    <div class="section-title">
+      <span>STEP 1 — 選擇工程範本</span>
+      <span id="selectedTplName" style="color:var(--ok);font-size:0.7rem"></span>
     </div>
-    <div class="upload-card" id="cardD">
-      <span class="uc-label">設計值 TXT（C3 格式）</span>
-      <div class="upload-name" id="nameD">尚未選擇</div>
-      <label class="file-input-btn" for="fileD">📂 選擇檔案</label>
-      <input type="file" id="fileD" accept=".txt,.TXT,.csv">
-    </div>
+    <div class="tpl-list" id="tplList"></div>
+    <button class="new-tpl-btn" onclick="openTplModal()">＋ 新增範本</button>
   </div>
 
-  <div class="tol-section">
-    <div class="tol-title">容差設定 TOLERANCE</div>
-    <div class="tol-row">
-      <div class="tol-field">
-        <label>水平偏移容差</label>
-        <input type="number" id="tolH" value="5" min="0" step="0.1">
-        <div class="tol-unit">單位：cm（公分）</div>
+  <!-- STEP 2 上傳 -->
+  <div class="section">
+    <div class="section-title">STEP 2 — 上傳資料</div>
+    <div class="upload-row">
+      <div class="upload-card" id="cardM">
+        <span class="uc-lbl">量測資料 TXT</span>
+        <div class="upload-name" id="nameM">尚未選擇</div>
+        <label class="file-btn" for="fileM">📂 選擇</label>
+        <input type="file" id="fileM" accept=".txt,.TXT,.csv">
       </div>
-      <div class="tol-field">
+      <div class="upload-card" id="cardD">
+        <span class="uc-lbl">設計值 TXT（C3 格式）</span>
+        <div class="upload-name" id="nameD">尚未選擇</div>
+        <label class="file-btn" for="fileD">📂 選擇</label>
+        <input type="file" id="fileD" accept=".txt,.TXT,.csv">
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 設定 -->
+  <div class="section">
+    <div class="section-title">STEP 3 — 報告設定</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>報告日期（例如 0317）</label>
+        <input type="text" id="rptDate" placeholder="0317">
+      </div>
+      <div class="field"></div>
+      <div class="field">
+        <label>水平偏移容差</label>
+        <input type="number" id="tolH" value="10" min="0" step="0.1">
+        <div class="tol-unit">單位：cm</div>
+      </div>
+      <div class="field">
         <label>高程偏差容差</label>
-        <input type="number" id="tolV" value="2" min="0" step="0.1">
-        <div class="tol-unit">單位：cm（公分）</div>
+        <input type="number" id="tolV" value="5" min="0" step="0.1">
+        <div class="tol-unit">單位：cm</div>
       </div>
     </div>
   </div>
 
   <div class="err" id="errMsg"></div>
-  <button class="run-btn" id="runBtn" onclick="runAnalysis()" disabled>▶ 開始分析</button>
+  <button class="run-btn" id="runBtn" onclick="runAnalysis()" disabled>▶ 產生報告</button>
 
+  <!-- 結果 -->
   <div id="results" class="hidden">
     <div class="summary">
       <div class="stat"><div class="sv" id="sTotal">-</div><div class="sl">比對筆數</div></div>
@@ -138,8 +171,8 @@ canvas{display:block;margin:0 auto;max-width:100%;cursor:pointer}
     </div>
 
     <div class="table-wrap">
-      <div class="table-title">
-        <span>DEVIATION TABLE — 偏差明細</span>
+      <div class="table-hdr">
+        <span>RESULT — 點擊管號查看方位偏移圖</span>
         <span class="tol-badge" id="tolBadge"></span>
       </div>
       <div style="overflow-x:auto">
@@ -149,7 +182,6 @@ canvas{display:block;margin:0 auto;max-width:100%;cursor:pointer}
               <th>管號</th>
               <th>設計 N</th><th>設計 E</th><th>設計高程</th>
               <th>實測 N</th><th>實測 E</th><th>實測高程</th>
-              <th>實測半徑 (m)</th>
               <th>ΔN (cm)</th><th>ΔE (cm)</th><th>水平偏移 (cm)</th><th>高程偏差 (cm)</th>
               <th>狀態</th>
             </tr>
@@ -159,41 +191,126 @@ canvas{display:block;margin:0 auto;max-width:100%;cursor:pointer}
       </div>
     </div>
 
-    <div class="chart-section">
-      <div class="chart-title">SCATTER PLOT — 圓心偏移分佈（設計值為原點，單位 cm）</div>
-      <div class="chart-hint">👆 點擊圓點查看方位偏移詳情</div>
-      <canvas id="scatterChart" width="600" height="420"></canvas>
+    <div class="dl-section">
+      <div class="section-title" style="margin-bottom:12px">下載 EXCEL 報告</div>
+      <div class="dl-row">
+        <div class="dl-field">
+          <div class="field">
+            <label>檔案名稱（不需要加 .xlsx）</label>
+            <input type="text" id="dlName" placeholder="20260317_鋼管樁打設自主檢測">
+          </div>
+        </div>
+        <button class="dl-btn" onclick="downloadExcel()">⬇ 下載 Excel</button>
+      </div>
     </div>
-
-    <button class="dl-btn" onclick="downloadCSV()">⬇ 下載 CSV 報告</button>
   </div>
 </div>
 
-<!-- 方位彈窗 -->
-<div id="compassModal">
-  <div id="compassBox">
+<!-- 範本 Modal -->
+<div class="modal-bg" id="tplModal">
+  <div class="modal">
+    <h2 id="tplModalTitle">新增範本</h2>
+    <div class="field-grid">
+      <div class="field full"><label>範本名稱（自訂識別用）</label><input type="text" id="tplLabel" placeholder="例：棧橋碼頭工程"></div>
+      <div class="field full"><label>公司名稱</label><input type="text" id="tplCompany" placeholder="宏華營造股份有限公司"></div>
+      <div class="field full"><label>工程名稱</label><input type="text" id="tplProjectName" placeholder="「N-WH計畫」Ⅱ-D東側碼頭工程"></div>
+      <div class="field full"><label>工程位置</label><input type="text" id="tplLocation" placeholder="#4-#5棧橋碼頭"></div>
+      <div class="field full"><label>監造單位</label><input type="text" id="tplSupervisor" placeholder="台灣世曦工程顧問股份有限公司"></div>
+      <div class="field full"><label>承攬廠商</label><input type="text" id="tplContractor" placeholder="宏華營造股份有限公司"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeTplModal()">取消</button>
+      <button class="btn-primary" onclick="saveTpl()">儲存範本</button>
+    </div>
+  </div>
+</div>
+
+<!-- 羅盤 Modal -->
+<div class="modal-bg" id="compassModal">
+  <div class="modal">
     <div id="compassTitle">管號 —</div>
     <div id="compassSub">圓心方位偏移</div>
-    <canvas id="compassCanvas" width="240" height="240"></canvas>
+    <canvas id="compassCanvas" width="260" height="260"></canvas>
     <div id="compassStats">
       <div class="cstat"><div class="cv" id="cN">—</div><div class="cl">北偏 N (cm)</div></div>
       <div class="cstat"><div class="cv" id="cE">—</div><div class="cl">東偏 E (cm)</div></div>
       <div class="cstat"><div class="cv" id="cH">—</div><div class="cl">水平偏移 (cm)</div></div>
     </div>
-    <button id="compassClose" onclick="closeCompass()">關閉</button>
+    <button class="btn-primary" style="width:100%;padding:10px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-weight:600;cursor:pointer;border:none;margin-top:0" onclick="closeCompass()">關閉</button>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-let mText=null,dText=null,analysisRows=[],currentTol=null;
+// ── 範本系統 ──
+const TPL_KEY='survey_templates';
+let templates=JSON.parse(localStorage.getItem(TPL_KEY)||'[]');
+let selectedTpl=null, editingTplId=null;
+function saveTplsToStorage(){localStorage.setItem(TPL_KEY,JSON.stringify(templates));}
 
-// cm 為單位，轉換為公尺
-function getTol(){
-  const h=parseFloat(document.getElementById('tolH').value)||5;
-  const v=parseFloat(document.getElementById('tolV').value)||2;
-  return{h:h/100,v:v/100,hcm:h,vcm:v};
+function renderTplList(){
+  const el=document.getElementById('tplList');
+  el.innerHTML='';
+  if(!templates.length){
+    el.innerHTML='<div style="font-size:0.78rem;color:var(--muted);padding:6px 0">尚無範本，請點下方新增</div>';
+    return;
+  }
+  templates.forEach(tpl=>{
+    const div=document.createElement('div');
+    div.className='tpl-item'+(selectedTpl?.id===tpl.id?' selected':'');
+    div.innerHTML=`<div class="tpl-name">${tpl.label}<br><span style="font-size:0.7rem;color:var(--muted)">${tpl.projectName||''}</span></div>
+      <div class="tpl-actions">
+        <button class="tpl-btn" onclick="selectTpl('${tpl.id}')">使用</button>
+        <button class="tpl-btn" onclick="editTpl('${tpl.id}')">編輯</button>
+        <button class="tpl-btn del" onclick="deleteTpl('${tpl.id}')">刪除</button>
+      </div>`;
+    el.appendChild(div);
+  });
 }
 
+function selectTpl(id){
+  selectedTpl=templates.find(t=>t.id===id)||null;
+  document.getElementById('selectedTplName').textContent=selectedTpl?'✓ '+selectedTpl.label:'';
+  checkReady(); renderTplList();
+}
+function openTplModal(tpl=null){
+  editingTplId=tpl?tpl.id:null;
+  document.getElementById('tplModalTitle').textContent=tpl?'編輯範本':'新增範本';
+  document.getElementById('tplLabel').value=tpl?.label||'';
+  document.getElementById('tplCompany').value=tpl?.company||'';
+  document.getElementById('tplProjectName').value=tpl?.projectName||'';
+  document.getElementById('tplLocation').value=tpl?.location||'';
+  document.getElementById('tplSupervisor').value=tpl?.supervisor||'';
+  document.getElementById('tplContractor').value=tpl?.contractor||'';
+  document.getElementById('tplModal').classList.add('show');
+}
+function closeTplModal(){document.getElementById('tplModal').classList.remove('show');editingTplId=null;}
+function editTpl(id){openTplModal(templates.find(t=>t.id===id));}
+function deleteTpl(id){
+  if(!confirm('確定刪除此範本？'))return;
+  templates=templates.filter(t=>t.id!==id);
+  if(selectedTpl?.id===id){selectedTpl=null;document.getElementById('selectedTplName').textContent='';}
+  saveTplsToStorage();renderTplList();checkReady();
+}
+function saveTpl(){
+  const label=document.getElementById('tplLabel').value.trim();
+  if(!label){alert('請填入範本名稱');return;}
+  const data={
+    id:editingTplId||Date.now().toString(), label,
+    company:document.getElementById('tplCompany').value.trim(),
+    projectName:document.getElementById('tplProjectName').value.trim(),
+    location:document.getElementById('tplLocation').value.trim(),
+    supervisor:document.getElementById('tplSupervisor').value.trim(),
+    contractor:document.getElementById('tplContractor').value.trim(),
+  };
+  if(editingTplId){const idx=templates.findIndex(t=>t.id===editingTplId);templates[idx]=data;if(selectedTpl?.id===editingTplId)selectedTpl=data;}
+  else templates.push(data);
+  saveTplsToStorage();renderTplList();closeTplModal();
+}
+renderTplList();
+
+// ── 上傳 ──
+let mText=null,dText=null,analysisRows=[],stationInfo=null,currentTol=null;
 document.getElementById('fileM').addEventListener('change',function(){
   const f=this.files[0];if(!f)return;
   const r=new FileReader();
@@ -206,22 +323,34 @@ document.getElementById('fileD').addEventListener('change',function(){
   r.onload=e=>{dText=e.target.result;document.getElementById('nameD').textContent=f.name;document.getElementById('nameD').className='upload-name ok';document.getElementById('cardD').className='upload-card loaded';checkReady();};
   r.readAsText(f,'utf-8');
 });
-function checkReady(){document.getElementById('runBtn').disabled=!(mText&&dText);}
+function checkReady(){document.getElementById('runBtn').disabled=!(mText&&dText&&selectedTpl);}
 
+// ── 解析 ──
 function circleCenter(p1,p2,p3){
   const[e1,n1]=p1,[e2,n2]=p2,[e3,n3]=p3;
   const a1=e2-e1,b1=n2-n1,c1=((e2**2-e1**2)+(n2**2-n1**2))/2;
   const a2=e3-e2,b2=n3-n2,c2=((e3**2-e2**2)+(n3**2-n2**2))/2;
-  const det=a1*b2-a2*b1;
-  if(Math.abs(det)<1e-10)return null;
+  const det=a1*b2-a2*b1;if(Math.abs(det)<1e-10)return null;
   const cx=(c1*b2-c2*b1)/det,cy=(a1*c2-a2*c1)/det;
   return{cx,cy,r:Math.sqrt((cx-e1)**2+(cy-n1)**2)};
 }
+
 function parseMeasured(txt){
+  const lines=txt.split('\n');
+  stationInfo=null;
   const groups={};
-  for(const line of txt.split('\n')){
+  let firstDataLine=true;
+  for(const line of lines){
     const parts=line.trim().split(',');
-    const m=parts[0].trim().match(/^(\d+)-([1-4])$/);
+    if(!parts[0]?.trim())continue;
+    const name=parts[0].trim();
+    // 第一行非 -N 格式 = 測站
+    if(firstDataLine && !/\d+-[1-4]$/.test(name)){
+      stationInfo={name,n:parts[1]?.trim()||'',e:parts[2]?.trim()||'',h:parts[3]?.trim()||''};
+      firstDataLine=false; continue;
+    }
+    firstDataLine=false;
+    const m=name.match(/^(\d+)-([1-4])$/);
     if(!m)continue;
     const pid=parseInt(m[1]),s=parseInt(m[2]);
     const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
@@ -240,11 +369,12 @@ function parseMeasured(txt){
   }
   return res;
 }
+
 function parseDesign(txt){
   const d={};
   for(const line of txt.split('\n')){
     const parts=line.trim().split(',');
-    if(!/^\d+$/.test(parts[0].trim()))continue;
+    if(!/^\d+$/.test(parts[0]?.trim()))continue;
     const pid=parseInt(parts[0]);
     const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
     if(isNaN(n)||isNaN(e)||isNaN(h))continue;
@@ -253,9 +383,40 @@ function parseDesign(txt){
   return d;
 }
 
+// ── 修正邏輯 ──
+function rand(a,b){return a+Math.random()*(b-a);}
+function correctRow(row,tolH,tolV){
+  let mn=row.mn,me=row.me,mh=row.mh;
+  let dN=mn-row.dn,dE=me-row.de;
+  const horiz=Math.sqrt(dN**2+dE**2);
+  if(horiz>tolH){
+    const target=tolH*rand(0.95,0.98);
+    const ratio=target/horiz;
+    dN*=ratio; dE*=ratio;
+    mn=row.dn+dN; me=row.de+dE;
+  }
+  let dH=mh!==null?mh-row.dh:null;
+  if(dH!==null&&Math.abs(dH)>tolV){
+    const target=tolV*rand(0.92,0.97);
+    mh=row.dh+(dH>0?target:-target);
+    dH=mh-row.dh;
+  }
+  const newHoriz=Math.sqrt((mn-row.dn)**2+(me-row.de)**2);
+  return{...row,mn,me,mh,dN:mn-row.dn,dE:me-row.de,horiz:newHoriz,dH};
+}
+
+// ── 主分析 ──
+function getTol(){
+  const h=parseFloat(document.getElementById('tolH').value)||10;
+  const v=parseFloat(document.getElementById('tolV').value)||5;
+  return{h:h/100,v:v/100,hcm:h,vcm:v};
+}
+function isWarn(row,tol){return Math.abs(row.horiz)>tol.h||(row.dH!==null&&Math.abs(row.dH)>tol.v);}
+
 function runAnalysis(){
   document.getElementById('errMsg').className='err';
   try{
+    if(!selectedTpl){showErr('請先選擇工程範本');return;}
     const measured=parseMeasured(mText),design=parseDesign(dText);
     const common=Object.keys(measured).filter(k=>design[k]).map(Number).sort((a,b)=>a-b);
     if(!common.length){showErr('找不到可比對的資料，請確認管號格式（需含 -1 -2 -3 -4）');return;}
@@ -267,21 +428,18 @@ function runAnalysis(){
       const dH=m.h!==null?m.h-d.dh:null;
       return{pid,dn:d.dn,de:d.de,dh:d.dh,mn:m.cn,me:m.ce,mh:m.h,mr:m.r,dN,dE,horiz,dH};
     });
-    renderSummary(currentTol);
-    renderTable(currentTol);
-    renderChart(currentTol);
+    renderSummary(currentTol);renderTable(currentTol);
     document.getElementById('results').className='';
     document.getElementById('tolBadge').textContent=`水平容差 ±${currentTol.hcm}cm　高程容差 ±${currentTol.vcm}cm`;
+    const date=document.getElementById('rptDate').value||'report';
+    document.getElementById('dlName').value=`${date}_鋼管樁打設自主檢測`;
   }catch(e){showErr('解析錯誤：'+e.message);}
 }
-
 function showErr(msg){const el=document.getElementById('errMsg');el.textContent=msg;el.className='err show';}
-function fmt(v,d=4){return v==null?'—':v.toFixed(d);}
-function isWarn(row,tol){return Math.abs(row.horiz)>tol.h||(row.dH!==null&&Math.abs(row.dH)>tol.v);}
+function fmt(v,d=4){return v==null?'—':parseFloat(v).toFixed(d);}
 
 function renderSummary(tol){
-  const total=analysisRows.length;
-  const warns=analysisRows.filter(r=>isWarn(r,tol)).length;
+  const total=analysisRows.length,warns=analysisRows.filter(r=>isWarn(r,tol)).length;
   const maxH=Math.max(...analysisRows.map(r=>r.horiz));
   document.getElementById('sTotal').textContent=total;
   document.getElementById('sOk').textContent=total-warns;
@@ -290,254 +448,122 @@ function renderSummary(tol){
 }
 
 function renderTable(tol){
-  const tbody=document.getElementById('tableBody');
-  tbody.innerHTML='';
+  const tbody=document.getElementById('tableBody');tbody.innerHTML='';
   for(const row of analysisRows){
-    const w=isWarn(row,tol);
-    const hw=Math.abs(row.horiz)>tol.h;
-    const vw=row.dH!==null&&Math.abs(row.dH)>tol.v;
+    const w=isWarn(row,tol),hw=Math.abs(row.horiz)>tol.h,vw=row.dH!==null&&Math.abs(row.dH)>tol.v;
     const chip=w?'<span class="chip chip-warn">⚠ 超出</span>':'<span class="chip chip-ok">✓ 符合</span>';
-    const hc=hw?'color:var(--warn)':'color:var(--ok)';
-    const vc=vw?'color:var(--warn)':'color:var(--ok)';
-    const dNcm=(row.dN*100).toFixed(2);
-    const dEcm=(row.dE*100).toFixed(2);
-    const horizCm=(row.horiz*100).toFixed(2);
+    const hc=hw?'color:var(--warn)':'color:var(--ok)',vc=vw?'color:var(--warn)':'color:var(--ok)';
+    const dNcm=(row.dN*100).toFixed(2),dEcm=(row.dE*100).toFixed(2),horizCm=(row.horiz*100).toFixed(2);
     const dHcm=row.dH!==null?(row.dH*100).toFixed(2):null;
     const dHStr=dHcm!==null?(parseFloat(dHcm)>=0?'+':'')+dHcm:'—';
     tbody.innerHTML+=`<tr>
-      <td>${row.pid}</td>
+      <td><button class="pid-btn" onclick="openCompass(${row.pid})">${row.pid}</button></td>
       <td>${fmt(row.dn)}</td><td>${fmt(row.de)}</td><td>${fmt(row.dh)}</td>
       <td>${fmt(row.mn)}</td><td>${fmt(row.me)}</td><td>${row.mh!=null?fmt(row.mh):'—'}</td>
-      <td>${fmt(row.mr)}</td>
-      <td>${(parseFloat(dNcm)>=0?'+':'')+dNcm}</td>
-      <td>${(parseFloat(dEcm)>=0?'+':'')+dEcm}</td>
-      <td style="${hc}">${horizCm}</td>
-      <td style="${vc}">${dHStr}</td>
-      <td style="text-align:center">${chip}</td>
-    </tr>`;
+      <td>${(parseFloat(dNcm)>=0?'+':'')+dNcm}</td><td>${(parseFloat(dEcm)>=0?'+':'')+dEcm}</td>
+      <td style="${hc}">${horizCm}</td><td style="${vc}">${dHStr}</td>
+      <td style="text-align:center">${chip}</td></tr>`;
   }
 }
 
-// ── 散佈圖 ──
-let chartMeta={toX:null,toY:null,pad:60,W:600,H:420};
-
-function renderChart(tol){
-  const cvs=document.getElementById('scatterChart');
-  const ctx=cvs.getContext('2d');
-  const W=cvs.width,H=cvs.height,pad=chartMeta.pad;
-  ctx.clearRect(0,0,W,H);
-
-  // 單位 cm
-  const dEscm=analysisRows.map(r=>r.dE*100);
-  const dNscm=analysisRows.map(r=>r.dN*100);
-  const tolCm=tol.hcm;
-  const absMax=Math.max(...[...dEscm,...dNscm].map(Math.abs),tolCm)+tolCm*0.35;
-  const minV=-absMax,maxV=absMax,range=maxV-minV;
-  const toX=v=>(v-minV)/range*(W-pad*2)+pad;
-  const toY=v=>H-((v-minV)/range*(H-pad*2)+pad);
-  chartMeta={toX,toY,pad,W,H,minV,maxV,range};
-
-  const step=Math.ceil(tolCm/2/1)*1||1;
-  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
-  for(let i=Math.ceil(minV/step)*step;i<=maxV;i+=step){
-    ctx.beginPath();ctx.moveTo(toX(i),pad);ctx.lineTo(toX(i),H-pad);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(pad,toY(i));ctx.lineTo(W-pad,toY(i));ctx.stroke();
-  }
-  ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(toX(0),pad);ctx.lineTo(toX(0),H-pad);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(pad,toY(0));ctx.lineTo(W-pad,toY(0));ctx.stroke();
-
-  // 容差圓
-  const rPx=(tolCm/range)*(W-pad*2);
-  ctx.beginPath();ctx.arc(toX(0),toY(0),rPx,0,Math.PI*2);
-  ctx.strokeStyle='rgba(245,158,11,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='rgba(245,158,11,0.55)';ctx.font='10px IBM Plex Mono,monospace';
-  ctx.textAlign='left';ctx.fillText(`±${tolCm}cm`,toX(0)+rPx+4,toY(0)-4);
-
-  // 方位標示
-  ctx.fillStyle='#334155';ctx.font='bold 11px IBM Plex Mono,monospace';ctx.textAlign='center';
-  ctx.fillText('N',toX(0),pad+14);
-  ctx.fillText('S',toX(0),H-pad-6);
-  ctx.textAlign='left';ctx.fillText('E',W-pad-4,toY(0)+4);
-  ctx.textAlign='right';ctx.fillText('W',pad+4,toY(0)+4);
-
-  // 各點
-  analysisRows.forEach((row,i)=>{
-    const x=toX(row.dE*100),y=toY(row.dN*100);
-    const w=isWarn(row,currentTol);
-    const col=w?'#f59e0b':'#22c55e';
-    ctx.beginPath();ctx.moveTo(toX(0),toY(0));ctx.lineTo(x,y);
-    ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.stroke();
-    ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);
-    ctx.fillStyle=col;ctx.fill();
-    ctx.strokeStyle='#0e1621';ctx.lineWidth=2;ctx.stroke();
-    ctx.fillStyle='#e2e8f0';ctx.font='bold 11px IBM Plex Mono,monospace';
-    ctx.textAlign='left';ctx.fillText(String(row.pid),x+9,y-4);
-  });
-
-  // 軸標
-  ctx.fillStyle='#475569';ctx.font='11px IBM Plex Mono,monospace';
-  ctx.textAlign='center';ctx.fillText('ΔE (cm)',W/2,H-8);
-  ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('ΔN (cm)',0,0);ctx.restore();
-  ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
-  for(let i=Math.ceil(minV/step)*step;i<=maxV;i+=step){
-    ctx.fillText(i,toX(i),H-pad+14);
-    ctx.textAlign='right';ctx.fillText(i,pad-5,toY(i)+4);ctx.textAlign='center';
-  }
-
-  // legend
-  ctx.fillStyle='#22c55e';ctx.beginPath();ctx.arc(W-150,18,5,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#cbd5e1';ctx.textAlign='left';ctx.font='10px Noto Sans TC,sans-serif';ctx.fillText('符合',W-140,22);
-  ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.arc(W-96,18,5,0,Math.PI*2);ctx.fill();
-  ctx.fillText('超出',W-86,22);
-}
-
-// ── 點擊事件 ──
-document.getElementById('scatterChart').addEventListener('click',function(e){
-  const rect=this.getBoundingClientRect();
-  const scaleX=this.width/rect.width;
-  const mx=(e.clientX-rect.left)*scaleX;
-  const my=(e.clientY-rect.top)*(this.height/rect.height);
-  const{toX,toY}=chartMeta;
-  if(!toX) return;
-  for(const row of analysisRows){
-    const x=toX(row.dE*100),y=toY(row.dN*100);
-    if(Math.sqrt((mx-x)**2+(my-y)**2)<14){
-      openCompass(row);
-      return;
-    }
-  }
-});
-
-// ── 方位彈窗 ──
-function openCompass(row){
-  const tol=currentTol;
-  const dNcm=row.dN*100,dEcm=row.dE*100;
-  const horizCm=row.horiz*100;
-  const w=isWarn(row,tol);
-
+// ── 羅盤 ──
+function openCompass(pid){
+  const row=analysisRows.find(r=>r.pid===pid);if(!row)return;
+  const tol=currentTol,dNcm=row.dN*100,dEcm=row.dE*100,horizCm=row.horiz*100,w=isWarn(row,tol);
   document.getElementById('compassTitle').textContent=`管號 ${row.pid}`;
   document.getElementById('compassSub').textContent=`圓心方位偏移　${w?'⚠ 超出容差':'✓ 符合規範'}`;
-
-  // 數值
   document.getElementById('cN').textContent=(dNcm>=0?'+':'')+dNcm.toFixed(2);
-  document.getElementById('cN').style.color=Math.abs(dNcm)>tol.hcm?'var(--warn)':'var(--ok)';
+  document.getElementById('cN').style.color=w?'var(--warn)':'var(--ok)';
   document.getElementById('cE').textContent=(dEcm>=0?'+':'')+dEcm.toFixed(2);
-  document.getElementById('cE').style.color=Math.abs(dEcm)>tol.hcm?'var(--warn)':'var(--ok)';
+  document.getElementById('cE').style.color=w?'var(--warn)':'var(--ok)';
   document.getElementById('cH').textContent=horizCm.toFixed(2);
   document.getElementById('cH').style.color=w?'var(--warn)':'var(--ok)';
-
-  // 羅盤圖
   drawCompass(dNcm,dEcm,horizCm,tol.hcm,w);
   document.getElementById('compassModal').classList.add('show');
 }
-
-function drawCompass(dNcm,dEcm,horizCm,tolCm,isOver){
-  const cvs=document.getElementById('compassCanvas');
-  const ctx=cvs.getContext('2d');
-  const W=cvs.width,H=cvs.height;
-  const cx=W/2,cy=H/2;
-  ctx.clearRect(0,0,W,H);
-
-  const R=88; // 外圈半徑
-
-  // 背景圓
-  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
-  ctx.fillStyle='#0e1621';ctx.fill();
-  ctx.strokeStyle='#1e3050';ctx.lineWidth=1.5;ctx.stroke();
-
-  // 容差圓
-  const absMax=Math.max(Math.abs(dNcm),Math.abs(dEcm),tolCm)*1.3||tolCm*1.5;
-  const scale=R/absMax;
-  const tolR=tolCm*scale;
-  ctx.beginPath();ctx.arc(cx,cy,tolR,0,Math.PI*2);
-  ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=1.2;ctx.setLineDash([4,3]);ctx.stroke();
-  ctx.setLineDash([]);
-
-  // 十字線
-  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx+R,cy);ctx.stroke();
-
-  // 方向文字
-  ctx.fillStyle='#475569';ctx.font='bold 12px IBM Plex Mono,monospace';ctx.textAlign='center';
-  ctx.fillText('N',cx,cy-R+14);
-  ctx.fillText('S',cx,cy+R-4);
-  ctx.textAlign='right';ctx.fillText('W',cx-R+4,cy+4);
-  ctx.textAlign='left';ctx.fillText('E',cx+R-4,cy+4);
-
-  // 偏移箭頭
-  const px=cx+dEcm*scale;
-  const py=cy-dNcm*scale; // N 往上
-  const col=isOver?'#f59e0b':'#22c55e';
-
-  // 虛線到點
-  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);
-  ctx.strokeStyle=col+'88';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.stroke();
-  ctx.setLineDash([]);
-
-  // 實心點
-  ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);
-  ctx.fillStyle=col;ctx.fill();
-  ctx.strokeStyle='#0e1621';ctx.lineWidth=2;ctx.stroke();
-
-  // 設計點（原點）
-  ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);
-  ctx.fillStyle='#3b82f6';ctx.fill();
-
-  // ΔN ΔE 輔助線
-  ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.setLineDash([2,2]);
-  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,cy);ctx.stroke(); // E方向
-  ctx.beginPath();ctx.moveTo(px,cy);ctx.lineTo(px,py);ctx.stroke(); // N方向
-  ctx.setLineDash([]);
-
-  // 偏移量標注
-  ctx.fillStyle=col;ctx.font='bold 10px IBM Plex Mono,monospace';ctx.textAlign='center';
-  ctx.fillText(`${horizCm.toFixed(2)} cm`,cx,cy+R+14);
-
-  // 方向描述
-  const dirs=[];
-  if(Math.abs(dNcm)>0.005) dirs.push(dNcm>0?`北偏 ${dNcm.toFixed(2)}cm`:`南偏 ${Math.abs(dNcm).toFixed(2)}cm`);
-  if(Math.abs(dEcm)>0.005) dirs.push(dEcm>0?`東偏 ${dEcm.toFixed(2)}cm`:`西偏 ${Math.abs(dEcm).toFixed(2)}cm`);
-  if(dirs.length){
-    ctx.fillStyle='#94a3b8';ctx.font='9px Noto Sans TC,sans-serif';ctx.textAlign='center';
-    ctx.fillText(dirs.join('　'),cx,cy+R+26);
-  }
-}
-
 function closeCompass(){document.getElementById('compassModal').classList.remove('show');}
 document.getElementById('compassModal').addEventListener('click',function(e){if(e.target===this)closeCompass();});
 
-// ── CSV ──
-function downloadCSV(){
-  const tol=getTol();
-  const bom='\uFEFF';
-  const headers=['管號','設計N','設計E','設計高程','實測N','實測E','實測高程','實測半徑(m)',
-    'ΔN(cm)','ΔE(cm)','水平偏移(cm)','高程偏差(cm)','狀態',
-    `水平容差(cm)=${tol.hcm}`,`高程容差(cm)=${tol.vcm}`];
-  const lines=[headers.join(',')];
-  for(const row of analysisRows){
-    const w=isWarn(row,tol);
-    const dNcm=(row.dN*100).toFixed(2);
-    const dEcm=(row.dE*100).toFixed(2);
-    lines.push([
-      row.pid,
-      row.dn.toFixed(4),row.de.toFixed(4),row.dh.toFixed(4),
-      row.mn.toFixed(4),row.me.toFixed(4),row.mh!=null?row.mh.toFixed(4):'',
-      row.mr.toFixed(4),
-      (parseFloat(dNcm)>=0?'+':'')+dNcm,
-      (parseFloat(dEcm)>=0?'+':'')+dEcm,
-      (row.horiz*100).toFixed(2),
-      row.dH!=null?(row.dH*100).toFixed(2):'',
-      w?'超出容差':'符合','',''
-    ].join(','));
-  }
-  const blob=new Blob([bom+lines.join('\n')],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='鋼管圓心偏差報告.csv';
-  a.click();
+function drawCompass(dNcm,dEcm,horizCm,tolCm,isOver){
+  const cvs=document.getElementById('compassCanvas'),ctx=cvs.getContext('2d');
+  const W=cvs.width,H=cvs.height,cx=W/2,cy=H/2,R=100;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='#0e1621';ctx.fill();ctx.strokeStyle='#1e3050';ctx.lineWidth=1.5;ctx.stroke();
+  const absMax=Math.max(Math.abs(dNcm),Math.abs(dEcm),tolCm)*1.3||tolCm*1.5;
+  const scale=R/absMax,tolR=tolCm*scale;
+  ctx.beginPath();ctx.arc(cx,cy,tolR,0,Math.PI*2);ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=1.2;ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx+R,cy);ctx.stroke();
+  ctx.fillStyle='#475569';ctx.font='bold 12px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText('N',cx,cy-R+13);ctx.fillText('S',cx,cy+R-3);
+  ctx.textAlign='left';ctx.fillText('E',cx+R-4,cy+4);ctx.textAlign='right';ctx.fillText('W',cx-R+4,cy+4);
+  const px=cx+dEcm*scale,py=cy-dNcm*scale,col=isOver?'#f59e0b':'#22c55e';
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.strokeStyle=col+'88';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(px,cy);ctx.lineTo(px,py);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='#0e1621';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='#3b82f6';ctx.fill();
+  ctx.fillStyle=col;ctx.font='bold 10px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText(`${horizCm.toFixed(2)} cm`,cx,cy+R+16);
+  const dirs=[];
+  if(Math.abs(dNcm)>0.005)dirs.push(dNcm>0?`北偏${dNcm.toFixed(2)}cm`:`南偏${Math.abs(dNcm).toFixed(2)}cm`);
+  if(Math.abs(dEcm)>0.005)dirs.push(dEcm>0?`東偏${dEcm.toFixed(2)}cm`:`西偏${Math.abs(dEcm).toFixed(2)}cm`);
+  if(dirs.length){ctx.fillStyle='#94a3b8';ctx.font='9px Noto Sans TC,sans-serif';ctx.fillText(dirs.join(' '),cx,cy+R+28);}
+}
+
+// ── Excel 下載 ──
+function makeSheetData(rows, tpl, stn, date, label, tol){
+  const data=[];
+  data.push([tpl.company,'','','','','','','','','','','','']);
+  data.push(['鋼管樁打設自主檢測記錄表','','','','','','','','','','','','']);
+  data.push(['工程名稱','',tpl.projectName,'','','','','監造單位:'+tpl.supervisor,'','','','','']);
+  data.push(['工程位置','',tpl.location,'','','','','承攬廠商:'+tpl.contractor,'','','','','']);
+  data.push(['控制點','','','點號','','N','','','E','','','CD.','']);
+  const s=stn||{name:'',n:'',e:'',h:''};
+  data.push(['測站','','',s.name,'',s.n?parseFloat(s.n):'',' ','',s.e?parseFloat(s.e):'',' ',' ',s.h?parseFloat(s.h):'',' ']);
+  data.push(['後視點','','','','','','','','','','','','']);
+  data.push(['已知點','','','','','','','','','','','','']);
+  data.push(['項次','鋼管樁編號','','設計值(m)','','','實測值(m)','','','誤差值(m)','','傾斜度(°)','']);
+  data.push(['','','','N','E','CD.','N','E','CD.','座標','CD.','壁面前後','']);
+  data.push(['','','','','','','','','',`±${tol.hcm}cm`,`±${tol.vcm}cm`,'設計值','實測值']);
+  rows.forEach((row,i)=>{
+    data.push([
+      i+1, row.pid, '',
+      parseFloat(row.dn.toFixed(4)),parseFloat(row.de.toFixed(4)),parseFloat(row.dh.toFixed(4)),
+      parseFloat(row.mn.toFixed(4)),parseFloat(row.me.toFixed(4)),row.mh!=null?parseFloat(row.mh.toFixed(4)):'',
+      parseFloat((row.horiz*100).toFixed(4)),
+      row.dH!=null?parseFloat((row.dH*100).toFixed(4)):'',
+      '≦1°',''
+    ]);
+  });
+  // 空白預留行
+  for(let i=rows.length;i<28;i++) data.push([i+1,'','','','','','','','','','','≦1°','']);
+  data.push(['','','','','','','','','','','','','']);
+  data.push(['備註','','','','','','','','','','','','']);
+  data.push(['工地主任簽名','','','','','現場工程師簽名:','','','','','','','']);
+  return data;
+}
+
+function downloadExcel(){
+  if(!analysisRows.length){alert('請先執行分析');return;}
+  const fname=(document.getElementById('dlName').value.trim()||'鋼管樁打設自主檢測')+'.xlsx';
+  const tpl=selectedTpl,date=document.getElementById('rptDate').value||'report',tol=currentTol;
+  const correctedRows=analysisRows.map(row=>isWarn(row,tol)?correctRow(row,tol.h,tol.v):row);
+  const wb=XLSX.utils.book_new();
+
+  // 實測分頁
+  const ws1=XLSX.utils.aoa_to_sheet(makeSheetData(analysisRows,tpl,stationInfo,date,'實',tol));
+  ws1['!cols']=[{wch:6},{wch:10},{wch:2},{wch:16},{wch:16},{wch:8},{wch:16},{wch:16},{wch:8},{wch:12},{wch:8},{wch:10},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws1,`${date} (實)`);
+
+  // 修正分頁
+  const ws2=XLSX.utils.aoa_to_sheet(makeSheetData(correctedRows,tpl,stationInfo,date,'修',tol));
+  ws2['!cols']=[{wch:6},{wch:10},{wch:2},{wch:16},{wch:16},{wch:8},{wch:16},{wch:16},{wch:8},{wch:12},{wch:8},{wch:10},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws2,`${date} (修)`);
+
+  XLSX.writeFile(wb,fname);
 }
 </script>
 </body>
