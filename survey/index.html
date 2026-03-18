@@ -57,13 +57,28 @@ tbody td:first-child{text-align:center;color:#93c5fd;font-weight:600}
 .chip-ok{background:rgba(34,197,94,0.15);color:var(--ok)}
 .chip-warn{background:rgba(245,158,11,0.15);color:var(--warn)}
 .chart-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:24px}
-.chart-title{font-size:0.75rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;margin-bottom:16px}
-canvas{display:block;margin:0 auto;max-width:100%}
+.chart-title{font-size:0.75rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;margin-bottom:8px}
+.chart-hint{font-size:0.68rem;color:var(--muted);margin-bottom:14px}
+canvas{display:block;margin:0 auto;max-width:100%;cursor:pointer}
 .dl-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:transparent;border:1px solid var(--ok);border-radius:10px;color:var(--ok);font-family:'IBM Plex Mono',monospace;font-size:0.85rem;cursor:pointer;transition:background 0.2s;margin-bottom:12px}
 .dl-btn:hover{background:rgba(34,197,94,0.08)}
 .hidden{display:none}
 .err{background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:12px 16px;font-size:0.82rem;color:var(--danger);margin-bottom:16px;display:none}
 .err.show{display:block}
+
+/* ── 方位彈窗 ── */
+#compassModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:999;align-items:center;justify-content:center;padding:20px}
+#compassModal.show{display:flex}
+#compassBox{background:var(--surface);border:1px solid var(--accent);border-radius:18px;padding:24px 20px;width:100%;max-width:360px;text-align:center}
+#compassTitle{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--accent2);letter-spacing:0.1em;margin-bottom:4px}
+#compassSub{font-size:0.72rem;color:var(--muted);margin-bottom:18px}
+#compassCanvas{display:block;margin:0 auto 16px}
+#compassStats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.cstat{background:var(--card);border-radius:8px;padding:10px 8px}
+.cstat .cv{font-family:'IBM Plex Mono',monospace;font-size:1rem;font-weight:600}
+.cstat .cl{font-size:0.65rem;color:var(--muted);margin-top:2px}
+#compassClose{width:100%;padding:10px;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:700;cursor:pointer}
+
 @media(max-width:600px){
   .upload-section,.tol-row{grid-template-columns:1fr}
   .summary{grid-template-columns:1fr 1fr}
@@ -100,13 +115,13 @@ canvas{display:block;margin:0 auto;max-width:100%}
     <div class="tol-row">
       <div class="tol-field">
         <label>水平偏移容差</label>
-        <input type="number" id="tolH" value="50" min="0" step="1">
-        <div class="tol-unit">單位：mm（毫米）</div>
+        <input type="number" id="tolH" value="5" min="0" step="0.1">
+        <div class="tol-unit">單位：cm（公分）</div>
       </div>
       <div class="tol-field">
         <label>高程偏差容差</label>
-        <input type="number" id="tolV" value="20" min="0" step="1">
-        <div class="tol-unit">單位：mm（毫米）</div>
+        <input type="number" id="tolV" value="2" min="0" step="0.1">
+        <div class="tol-unit">單位：cm（公分）</div>
       </div>
     </div>
   </div>
@@ -119,8 +134,9 @@ canvas{display:block;margin:0 auto;max-width:100%}
       <div class="stat"><div class="sv" id="sTotal">-</div><div class="sl">比對筆數</div></div>
       <div class="stat"><div class="sv" id="sOk">-</div><div class="sl">符合規範</div></div>
       <div class="stat"><div class="sv" id="sWarn">-</div><div class="sl">超出容差</div></div>
-      <div class="stat"><div class="sv" id="sMaxH">-</div><div class="sl">最大水平偏移 (mm)</div></div>
+      <div class="stat"><div class="sv" id="sMaxH">-</div><div class="sl">最大水平偏移 (cm)</div></div>
     </div>
+
     <div class="table-wrap">
       <div class="table-title">
         <span>DEVIATION TABLE — 偏差明細</span>
@@ -133,8 +149,8 @@ canvas{display:block;margin:0 auto;max-width:100%}
               <th>管號</th>
               <th>設計 N</th><th>設計 E</th><th>設計高程</th>
               <th>實測 N</th><th>實測 E</th><th>實測高程</th>
-              <th>實測半徑</th>
-              <th>ΔN (m)</th><th>ΔE (m)</th><th>水平偏移 (mm)</th><th>高程偏差 (mm)</th>
+              <th>實測半徑 (m)</th>
+              <th>ΔN (cm)</th><th>ΔE (cm)</th><th>水平偏移 (cm)</th><th>高程偏差 (cm)</th>
               <th>狀態</th>
             </tr>
           </thead>
@@ -142,24 +158,100 @@ canvas{display:block;margin:0 auto;max-width:100%}
         </table>
       </div>
     </div>
+
     <div class="chart-section">
-      <div class="chart-title">SCATTER PLOT — 圓心偏移分佈（設計值為原點，單位 mm）</div>
+      <div class="chart-title">SCATTER PLOT — 圓心偏移分佈（設計值為原點，單位 cm）</div>
+      <div class="chart-hint">👆 點擊圓點查看方位偏移詳情</div>
       <canvas id="scatterChart" width="600" height="420"></canvas>
     </div>
+
     <button class="dl-btn" onclick="downloadCSV()">⬇ 下載 CSV 報告</button>
   </div>
 </div>
 
+<!-- 方位彈窗 -->
+<div id="compassModal">
+  <div id="compassBox">
+    <div id="compassTitle">管號 —</div>
+    <div id="compassSub">圓心方位偏移</div>
+    <canvas id="compassCanvas" width="240" height="240"></canvas>
+    <div id="compassStats">
+      <div class="cstat"><div class="cv" id="cN">—</div><div class="cl">北偏 N (cm)</div></div>
+      <div class="cstat"><div class="cv" id="cE">—</div><div class="cl">東偏 E (cm)</div></div>
+      <div class="cstat"><div class="cv" id="cH">—</div><div class="cl">水平偏移 (cm)</div></div>
+    </div>
+    <button id="compassClose" onclick="closeCompass()">關閉</button>
+  </div>
+</div>
+
 <script>
-let mText=null,dText=null,analysisRows=[];
-function getTol(){const h=parseFloat(document.getElementById('tolH').value)||50;const v=parseFloat(document.getElementById('tolV').value)||20;return{h:h/1000,v:v/1000,hmm:h,vmm:v};}
-document.getElementById('fileM').addEventListener('change',function(){const f=this.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{mText=e.target.result;document.getElementById('nameM').textContent=f.name;document.getElementById('nameM').className='upload-name ok';document.getElementById('cardM').className='upload-card loaded';checkReady();};r.readAsText(f,'utf-8');});
-document.getElementById('fileD').addEventListener('change',function(){const f=this.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{dText=e.target.result;document.getElementById('nameD').textContent=f.name;document.getElementById('nameD').className='upload-name ok';document.getElementById('cardD').className='upload-card loaded';checkReady();};r.readAsText(f,'utf-8');});
+let mText=null,dText=null,analysisRows=[],currentTol=null;
+
+// cm 為單位，轉換為公尺
+function getTol(){
+  const h=parseFloat(document.getElementById('tolH').value)||5;
+  const v=parseFloat(document.getElementById('tolV').value)||2;
+  return{h:h/100,v:v/100,hcm:h,vcm:v};
+}
+
+document.getElementById('fileM').addEventListener('change',function(){
+  const f=this.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{mText=e.target.result;document.getElementById('nameM').textContent=f.name;document.getElementById('nameM').className='upload-name ok';document.getElementById('cardM').className='upload-card loaded';checkReady();};
+  r.readAsText(f,'utf-8');
+});
+document.getElementById('fileD').addEventListener('change',function(){
+  const f=this.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{dText=e.target.result;document.getElementById('nameD').textContent=f.name;document.getElementById('nameD').className='upload-name ok';document.getElementById('cardD').className='upload-card loaded';checkReady();};
+  r.readAsText(f,'utf-8');
+});
 function checkReady(){document.getElementById('runBtn').disabled=!(mText&&dText);}
 
-function circleCenter(p1,p2,p3){const[e1,n1]=p1,[e2,n2]=p2,[e3,n3]=p3;const a1=e2-e1,b1=n2-n1,c1=((e2**2-e1**2)+(n2**2-n1**2))/2;const a2=e3-e2,b2=n3-n2,c2=((e3**2-e2**2)+(n3**2-n2**2))/2;const det=a1*b2-a2*b1;if(Math.abs(det)<1e-10)return null;const cx=(c1*b2-c2*b1)/det,cy=(a1*c2-a2*c1)/det;return{cx,cy,r:Math.sqrt((cx-e1)**2+(cy-n1)**2)};}
-function parseMeasured(txt){const groups={};for(const line of txt.split('\n')){const parts=line.trim().split(',');const m=parts[0].trim().match(/^(\d+)-([1-4])$/);if(!m)continue;const pid=parseInt(m[1]),s=parseInt(m[2]);const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);if(isNaN(n)||isNaN(e)||isNaN(h))continue;if(!groups[pid])groups[pid]={pts:{},h4:null};if(s<=3)groups[pid].pts[s]=[e,n];else if(s===4)groups[pid].h4=h;}const res={};for(const[pid,data]of Object.entries(groups)){const pts=data.pts;if(!pts[1]||!pts[2]||!pts[3])continue;const c=circleCenter(pts[1],pts[2],pts[3]);if(!c)continue;res[pid]={ce:c.cx,cn:c.cy,r:c.r,h:data.h4};}return res;}
-function parseDesign(txt){const d={};for(const line of txt.split('\n')){const parts=line.trim().split(',');if(!/^\d+$/.test(parts[0].trim()))continue;const pid=parseInt(parts[0]);const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);if(isNaN(n)||isNaN(e)||isNaN(h))continue;d[pid]={dn:n,de:e,dh:h};}return d;}
+function circleCenter(p1,p2,p3){
+  const[e1,n1]=p1,[e2,n2]=p2,[e3,n3]=p3;
+  const a1=e2-e1,b1=n2-n1,c1=((e2**2-e1**2)+(n2**2-n1**2))/2;
+  const a2=e3-e2,b2=n3-n2,c2=((e3**2-e2**2)+(n3**2-n2**2))/2;
+  const det=a1*b2-a2*b1;
+  if(Math.abs(det)<1e-10)return null;
+  const cx=(c1*b2-c2*b1)/det,cy=(a1*c2-a2*c1)/det;
+  return{cx,cy,r:Math.sqrt((cx-e1)**2+(cy-n1)**2)};
+}
+function parseMeasured(txt){
+  const groups={};
+  for(const line of txt.split('\n')){
+    const parts=line.trim().split(',');
+    const m=parts[0].trim().match(/^(\d+)-([1-4])$/);
+    if(!m)continue;
+    const pid=parseInt(m[1]),s=parseInt(m[2]);
+    const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
+    if(isNaN(n)||isNaN(e)||isNaN(h))continue;
+    if(!groups[pid])groups[pid]={pts:{},h4:null};
+    if(s<=3)groups[pid].pts[s]=[e,n];
+    else if(s===4)groups[pid].h4=h;
+  }
+  const res={};
+  for(const[pid,data]of Object.entries(groups)){
+    const pts=data.pts;
+    if(!pts[1]||!pts[2]||!pts[3])continue;
+    const c=circleCenter(pts[1],pts[2],pts[3]);
+    if(!c)continue;
+    res[pid]={ce:c.cx,cn:c.cy,r:c.r,h:data.h4};
+  }
+  return res;
+}
+function parseDesign(txt){
+  const d={};
+  for(const line of txt.split('\n')){
+    const parts=line.trim().split(',');
+    if(!/^\d+$/.test(parts[0].trim()))continue;
+    const pid=parseInt(parts[0]);
+    const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
+    if(isNaN(n)||isNaN(e)||isNaN(h))continue;
+    d[pid]={dn:n,de:e,dh:h};
+  }
+  return d;
+}
 
 function runAnalysis(){
   document.getElementById('errMsg').className='err';
@@ -167,24 +259,286 @@ function runAnalysis(){
     const measured=parseMeasured(mText),design=parseDesign(dText);
     const common=Object.keys(measured).filter(k=>design[k]).map(Number).sort((a,b)=>a-b);
     if(!common.length){showErr('找不到可比對的資料，請確認管號格式（需含 -1 -2 -3 -4）');return;}
-    const tol=getTol();
-    analysisRows=common.map(pid=>{const m=measured[pid],d=design[pid];const dN=m.cn-d.dn,dE=m.ce-d.de;const horiz=Math.sqrt(dN**2+dE**2);const dH=m.h!==null?m.h-d.dh:null;return{pid,dn:d.dn,de:d.de,dh:d.dh,mn:m.cn,me:m.ce,mh:m.h,mr:m.r,dN,dE,horiz,dH};});
-    renderSummary(tol);renderTable(tol);renderChart(tol);
+    currentTol=getTol();
+    analysisRows=common.map(pid=>{
+      const m=measured[pid],d=design[pid];
+      const dN=m.cn-d.dn,dE=m.ce-d.de;
+      const horiz=Math.sqrt(dN**2+dE**2);
+      const dH=m.h!==null?m.h-d.dh:null;
+      return{pid,dn:d.dn,de:d.de,dh:d.dh,mn:m.cn,me:m.ce,mh:m.h,mr:m.r,dN,dE,horiz,dH};
+    });
+    renderSummary(currentTol);
+    renderTable(currentTol);
+    renderChart(currentTol);
     document.getElementById('results').className='';
-    document.getElementById('tolBadge').textContent=`水平容差 ±${tol.hmm}mm　高程容差 ±${tol.vmm}mm`;
+    document.getElementById('tolBadge').textContent=`水平容差 ±${currentTol.hcm}cm　高程容差 ±${currentTol.vcm}cm`;
   }catch(e){showErr('解析錯誤：'+e.message);}
 }
+
 function showErr(msg){const el=document.getElementById('errMsg');el.textContent=msg;el.className='err show';}
 function fmt(v,d=4){return v==null?'—':v.toFixed(d);}
 function isWarn(row,tol){return Math.abs(row.horiz)>tol.h||(row.dH!==null&&Math.abs(row.dH)>tol.v);}
 
-function renderSummary(tol){const total=analysisRows.length;const warns=analysisRows.filter(r=>isWarn(r,tol)).length;const maxH=Math.max(...analysisRows.map(r=>r.horiz));document.getElementById('sTotal').textContent=total;document.getElementById('sOk').textContent=total-warns;document.getElementById('sWarn').textContent=warns;document.getElementById('sMaxH').textContent=(maxH*1000).toFixed(1);}
+function renderSummary(tol){
+  const total=analysisRows.length;
+  const warns=analysisRows.filter(r=>isWarn(r,tol)).length;
+  const maxH=Math.max(...analysisRows.map(r=>r.horiz));
+  document.getElementById('sTotal').textContent=total;
+  document.getElementById('sOk').textContent=total-warns;
+  document.getElementById('sWarn').textContent=warns;
+  document.getElementById('sMaxH').textContent=(maxH*100).toFixed(2);
+}
 
-function renderTable(tol){const tbody=document.getElementById('tableBody');tbody.innerHTML='';for(const row of analysisRows){const w=isWarn(row,tol);const hw=Math.abs(row.horiz)>tol.h;const vw=row.dH!==null&&Math.abs(row.dH)>tol.v;const chip=w?'<span class="chip chip-warn">⚠ 超出</span>':'<span class="chip chip-ok">✓ 符合</span>';const hc=hw?'color:var(--warn)':'color:var(--ok)';const vc=vw?'color:var(--warn)':'color:var(--ok)';const horizMm=(row.horiz*1000).toFixed(2);const dHmm=row.dH!==null?(row.dH*1000).toFixed(2):'—';const dHSign=row.dH!==null?(row.dH>=0?'+':'')+dHmm:dHmm;tbody.innerHTML+=`<tr><td>${row.pid}</td><td>${fmt(row.dn)}</td><td>${fmt(row.de)}</td><td>${fmt(row.dh)}</td><td>${fmt(row.mn)}</td><td>${fmt(row.me)}</td><td>${row.mh!=null?fmt(row.mh):'—'}</td><td>${fmt(row.mr)}</td><td>${(row.dN>=0?'+':'')+fmt(row.dN)}</td><td>${(row.dE>=0?'+':'')+fmt(row.dE)}</td><td style="${hc}">${horizMm}</td><td style="${vc}">${dHSign}</td><td style="text-align:center">${chip}</td></tr>`;}}
+function renderTable(tol){
+  const tbody=document.getElementById('tableBody');
+  tbody.innerHTML='';
+  for(const row of analysisRows){
+    const w=isWarn(row,tol);
+    const hw=Math.abs(row.horiz)>tol.h;
+    const vw=row.dH!==null&&Math.abs(row.dH)>tol.v;
+    const chip=w?'<span class="chip chip-warn">⚠ 超出</span>':'<span class="chip chip-ok">✓ 符合</span>';
+    const hc=hw?'color:var(--warn)':'color:var(--ok)';
+    const vc=vw?'color:var(--warn)':'color:var(--ok)';
+    const dNcm=(row.dN*100).toFixed(2);
+    const dEcm=(row.dE*100).toFixed(2);
+    const horizCm=(row.horiz*100).toFixed(2);
+    const dHcm=row.dH!==null?(row.dH*100).toFixed(2):null;
+    const dHStr=dHcm!==null?(parseFloat(dHcm)>=0?'+':'')+dHcm:'—';
+    tbody.innerHTML+=`<tr>
+      <td>${row.pid}</td>
+      <td>${fmt(row.dn)}</td><td>${fmt(row.de)}</td><td>${fmt(row.dh)}</td>
+      <td>${fmt(row.mn)}</td><td>${fmt(row.me)}</td><td>${row.mh!=null?fmt(row.mh):'—'}</td>
+      <td>${fmt(row.mr)}</td>
+      <td>${(parseFloat(dNcm)>=0?'+':'')+dNcm}</td>
+      <td>${(parseFloat(dEcm)>=0?'+':'')+dEcm}</td>
+      <td style="${hc}">${horizCm}</td>
+      <td style="${vc}">${dHStr}</td>
+      <td style="text-align:center">${chip}</td>
+    </tr>`;
+  }
+}
 
-function renderChart(tol){const cvs=document.getElementById('scatterChart');const ctx=cvs.getContext('2d');const W=cvs.width,H=cvs.height,pad=60;ctx.clearRect(0,0,W,H);const dEsmm=analysisRows.map(r=>r.dE*1000);const dNsmm=analysisRows.map(r=>r.dN*1000);const tolMm=tol.hmm;const absMax=Math.max(...[...dEsmm,...dNsmm].map(Math.abs),tolMm)+tolMm*0.3;const minV=-absMax,maxV=absMax,range=maxV-minV;const toX=v=>(v-minV)/range*(W-pad*2)+pad;const toY=v=>H-((v-minV)/range*(H-pad*2)+pad);const step=Math.ceil(tolMm/2/10)*10||10;ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;for(let i=Math.ceil(minV/step)*step;i<=maxV;i+=step){ctx.beginPath();ctx.moveTo(toX(i),pad);ctx.lineTo(toX(i),H-pad);ctx.stroke();ctx.beginPath();ctx.moveTo(pad,toY(i));ctx.lineTo(W-pad,toY(i));ctx.stroke();}ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(toX(0),pad);ctx.lineTo(toX(0),H-pad);ctx.stroke();ctx.beginPath();ctx.moveTo(pad,toY(0));ctx.lineTo(W-pad,toY(0));ctx.stroke();const rPx=(tolMm/range)*(W-pad*2);ctx.beginPath();ctx.arc(toX(0),toY(0),rPx,0,Math.PI*2);ctx.strokeStyle='rgba(245,158,11,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(245,158,11,0.5)';ctx.font='10px IBM Plex Mono,monospace';ctx.textAlign='left';ctx.fillText(`±${tolMm}mm`,toX(0)+rPx+4,toY(0)-4);analysisRows.forEach(row=>{const x=toX(row.dE*1000),y=toY(row.dN*1000);const w=isWarn(row,tol);const col=w?'#f59e0b':'#22c55e';ctx.beginPath();ctx.moveTo(toX(0),toY(0));ctx.lineTo(x,y);ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.stroke();ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='#0e1621';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#e2e8f0';ctx.font='bold 11px IBM Plex Mono,monospace';ctx.textAlign='left';ctx.fillText(String(row.pid),x+8,y-4);});ctx.fillStyle='#475569';ctx.font='11px IBM Plex Mono,monospace';ctx.textAlign='center';ctx.fillText('ΔE (mm)',W/2,H-8);ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('ΔN (mm)',0,0);ctx.restore();ctx.fillStyle='#475569';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';for(let i=Math.ceil(minV/step)*step;i<=maxV;i+=step){ctx.fillText(i,toX(i),H-pad+14);ctx.textAlign='right';ctx.fillText(i,pad-5,toY(i)+4);ctx.textAlign='center';}ctx.fillStyle='#22c55e';ctx.beginPath();ctx.arc(W-140,18,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#cbd5e1';ctx.textAlign='left';ctx.font='10px Noto Sans TC,sans-serif';ctx.fillText('符合',W-130,22);ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.arc(W-88,18,5,0,Math.PI*2);ctx.fill();ctx.fillText('超出',W-78,22);}
+// ── 散佈圖 ──
+let chartMeta={toX:null,toY:null,pad:60,W:600,H:420};
 
-function downloadCSV(){const tol=getTol();const bom='\uFEFF';const headers=['管號','設計N','設計E','設計高程','實測N','實測E','實測高程','實測半徑','ΔN(m)','ΔE(m)','水平偏移(mm)','高程偏差(mm)','狀態',`水平容差(mm)=${tol.hmm}`,`高程容差(mm)=${tol.vmm}`];const lines=[headers.join(',')];for(const row of analysisRows){const w=isWarn(row,tol);lines.push([row.pid,row.dn.toFixed(4),row.de.toFixed(4),row.dh.toFixed(4),row.mn.toFixed(4),row.me.toFixed(4),row.mh!=null?row.mh.toFixed(4):'',row.mr.toFixed(4),(row.dN>=0?'+':'')+row.dN.toFixed(4),(row.dE>=0?'+':'')+row.dE.toFixed(4),(row.horiz*1000).toFixed(2),row.dH!=null?(row.dH*1000).toFixed(2):'',w?'超出容差':'符合','',''].join(','));}const blob=new Blob([bom+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='鋼管圓心偏差報告.csv';a.click();}
+function renderChart(tol){
+  const cvs=document.getElementById('scatterChart');
+  const ctx=cvs.getContext('2d');
+  const W=cvs.width,H=cvs.height,pad=chartMeta.pad;
+  ctx.clearRect(0,0,W,H);
+
+  // 單位 cm
+  const dEscm=analysisRows.map(r=>r.dE*100);
+  const dNscm=analysisRows.map(r=>r.dN*100);
+  const tolCm=tol.hcm;
+  const absMax=Math.max(...[...dEscm,...dNscm].map(Math.abs),tolCm)+tolCm*0.35;
+  const minV=-absMax,maxV=absMax,range=maxV-minV;
+  const toX=v=>(v-minV)/range*(W-pad*2)+pad;
+  const toY=v=>H-((v-minV)/range*(H-pad*2)+pad);
+  chartMeta={toX,toY,pad,W,H,minV,maxV,range};
+
+  const step=Math.ceil(tolCm/2/1)*1||1;
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let i=Math.ceil(minV/step)*step;i<=maxV;i+=step){
+    ctx.beginPath();ctx.moveTo(toX(i),pad);ctx.lineTo(toX(i),H-pad);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pad,toY(i));ctx.lineTo(W-pad,toY(i));ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(toX(0),pad);ctx.lineTo(toX(0),H-pad);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(pad,toY(0));ctx.lineTo(W-pad,toY(0));ctx.stroke();
+
+  // 容差圓
+  const rPx=(tolCm/range)*(W-pad*2);
+  ctx.beginPath();ctx.arc(toX(0),toY(0),rPx,0,Math.PI*2);
+  ctx.strokeStyle='rgba(245,158,11,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(245,158,11,0.55)';ctx.font='10px IBM Plex Mono,monospace';
+  ctx.textAlign='left';ctx.fillText(`±${tolCm}cm`,toX(0)+rPx+4,toY(0)-4);
+
+  // 方位標示
+  ctx.fillStyle='#334155';ctx.font='bold 11px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText('N',toX(0),pad+14);
+  ctx.fillText('S',toX(0),H-pad-6);
+  ctx.textAlign='left';ctx.fillText('E',W-pad-4,toY(0)+4);
+  ctx.textAlign='right';ctx.fillText('W',pad+4,toY(0)+4);
+
+  // 各點
+  analysisRows.forEach((row,i)=>{
+    const x=toX(row.dE*100),y=toY(row.dN*100);
+    const w=isWarn(row,currentTol);
+    const col=w?'#f59e0b':'#22c55e';
+    ctx.beginPath();ctx.moveTo(toX(0),toY(0));ctx.lineTo(x,y);
+    ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.fill();
+    ctx.strokeStyle='#0e1621';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#e2e8f0';ctx.font='bold 11px IBM Plex Mono,monospace';
+    ctx.textAlign='left';ctx.fillText(String(row.pid),x+9,y-4);
+  });
+
+  // 軸標
+  ctx.fillStyle='#475569';ctx.font='11px IBM Plex Mono,monospace';
+  ctx.textAlign='center';ctx.fillText('ΔE (cm)',W/2,H-8);
+  ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('ΔN (cm)',0,0);ctx.restore();
+  ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
+  for(let i=Math.ceil(minV/step)*step;i<=maxV;i+=step){
+    ctx.fillText(i,toX(i),H-pad+14);
+    ctx.textAlign='right';ctx.fillText(i,pad-5,toY(i)+4);ctx.textAlign='center';
+  }
+
+  // legend
+  ctx.fillStyle='#22c55e';ctx.beginPath();ctx.arc(W-150,18,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#cbd5e1';ctx.textAlign='left';ctx.font='10px Noto Sans TC,sans-serif';ctx.fillText('符合',W-140,22);
+  ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.arc(W-96,18,5,0,Math.PI*2);ctx.fill();
+  ctx.fillText('超出',W-86,22);
+}
+
+// ── 點擊事件 ──
+document.getElementById('scatterChart').addEventListener('click',function(e){
+  const rect=this.getBoundingClientRect();
+  const scaleX=this.width/rect.width;
+  const mx=(e.clientX-rect.left)*scaleX;
+  const my=(e.clientY-rect.top)*(this.height/rect.height);
+  const{toX,toY}=chartMeta;
+  if(!toX) return;
+  for(const row of analysisRows){
+    const x=toX(row.dE*100),y=toY(row.dN*100);
+    if(Math.sqrt((mx-x)**2+(my-y)**2)<14){
+      openCompass(row);
+      return;
+    }
+  }
+});
+
+// ── 方位彈窗 ──
+function openCompass(row){
+  const tol=currentTol;
+  const dNcm=row.dN*100,dEcm=row.dE*100;
+  const horizCm=row.horiz*100;
+  const w=isWarn(row,tol);
+
+  document.getElementById('compassTitle').textContent=`管號 ${row.pid}`;
+  document.getElementById('compassSub').textContent=`圓心方位偏移　${w?'⚠ 超出容差':'✓ 符合規範'}`;
+
+  // 數值
+  document.getElementById('cN').textContent=(dNcm>=0?'+':'')+dNcm.toFixed(2);
+  document.getElementById('cN').style.color=Math.abs(dNcm)>tol.hcm?'var(--warn)':'var(--ok)';
+  document.getElementById('cE').textContent=(dEcm>=0?'+':'')+dEcm.toFixed(2);
+  document.getElementById('cE').style.color=Math.abs(dEcm)>tol.hcm?'var(--warn)':'var(--ok)';
+  document.getElementById('cH').textContent=horizCm.toFixed(2);
+  document.getElementById('cH').style.color=w?'var(--warn)':'var(--ok)';
+
+  // 羅盤圖
+  drawCompass(dNcm,dEcm,horizCm,tol.hcm,w);
+  document.getElementById('compassModal').classList.add('show');
+}
+
+function drawCompass(dNcm,dEcm,horizCm,tolCm,isOver){
+  const cvs=document.getElementById('compassCanvas');
+  const ctx=cvs.getContext('2d');
+  const W=cvs.width,H=cvs.height;
+  const cx=W/2,cy=H/2;
+  ctx.clearRect(0,0,W,H);
+
+  const R=88; // 外圈半徑
+
+  // 背景圓
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.fillStyle='#0e1621';ctx.fill();
+  ctx.strokeStyle='#1e3050';ctx.lineWidth=1.5;ctx.stroke();
+
+  // 容差圓
+  const absMax=Math.max(Math.abs(dNcm),Math.abs(dEcm),tolCm)*1.3||tolCm*1.5;
+  const scale=R/absMax;
+  const tolR=tolCm*scale;
+  ctx.beginPath();ctx.arc(cx,cy,tolR,0,Math.PI*2);
+  ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=1.2;ctx.setLineDash([4,3]);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 十字線
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx+R,cy);ctx.stroke();
+
+  // 方向文字
+  ctx.fillStyle='#475569';ctx.font='bold 12px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText('N',cx,cy-R+14);
+  ctx.fillText('S',cx,cy+R-4);
+  ctx.textAlign='right';ctx.fillText('W',cx-R+4,cy+4);
+  ctx.textAlign='left';ctx.fillText('E',cx+R-4,cy+4);
+
+  // 偏移箭頭
+  const px=cx+dEcm*scale;
+  const py=cy-dNcm*scale; // N 往上
+  const col=isOver?'#f59e0b':'#22c55e';
+
+  // 虛線到點
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);
+  ctx.strokeStyle=col+'88';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 實心點
+  ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);
+  ctx.fillStyle=col;ctx.fill();
+  ctx.strokeStyle='#0e1621';ctx.lineWidth=2;ctx.stroke();
+
+  // 設計點（原點）
+  ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);
+  ctx.fillStyle='#3b82f6';ctx.fill();
+
+  // ΔN ΔE 輔助線
+  ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,cy);ctx.stroke(); // E方向
+  ctx.beginPath();ctx.moveTo(px,cy);ctx.lineTo(px,py);ctx.stroke(); // N方向
+  ctx.setLineDash([]);
+
+  // 偏移量標注
+  ctx.fillStyle=col;ctx.font='bold 10px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText(`${horizCm.toFixed(2)} cm`,cx,cy+R+14);
+
+  // 方向描述
+  const dirs=[];
+  if(Math.abs(dNcm)>0.005) dirs.push(dNcm>0?`北偏 ${dNcm.toFixed(2)}cm`:`南偏 ${Math.abs(dNcm).toFixed(2)}cm`);
+  if(Math.abs(dEcm)>0.005) dirs.push(dEcm>0?`東偏 ${dEcm.toFixed(2)}cm`:`西偏 ${Math.abs(dEcm).toFixed(2)}cm`);
+  if(dirs.length){
+    ctx.fillStyle='#94a3b8';ctx.font='9px Noto Sans TC,sans-serif';ctx.textAlign='center';
+    ctx.fillText(dirs.join('　'),cx,cy+R+26);
+  }
+}
+
+function closeCompass(){document.getElementById('compassModal').classList.remove('show');}
+document.getElementById('compassModal').addEventListener('click',function(e){if(e.target===this)closeCompass();});
+
+// ── CSV ──
+function downloadCSV(){
+  const tol=getTol();
+  const bom='\uFEFF';
+  const headers=['管號','設計N','設計E','設計高程','實測N','實測E','實測高程','實測半徑(m)',
+    'ΔN(cm)','ΔE(cm)','水平偏移(cm)','高程偏差(cm)','狀態',
+    `水平容差(cm)=${tol.hcm}`,`高程容差(cm)=${tol.vcm}`];
+  const lines=[headers.join(',')];
+  for(const row of analysisRows){
+    const w=isWarn(row,tol);
+    const dNcm=(row.dN*100).toFixed(2);
+    const dEcm=(row.dE*100).toFixed(2);
+    lines.push([
+      row.pid,
+      row.dn.toFixed(4),row.de.toFixed(4),row.dh.toFixed(4),
+      row.mn.toFixed(4),row.me.toFixed(4),row.mh!=null?row.mh.toFixed(4):'',
+      row.mr.toFixed(4),
+      (parseFloat(dNcm)>=0?'+':'')+dNcm,
+      (parseFloat(dEcm)>=0?'+':'')+dEcm,
+      (row.horiz*100).toFixed(2),
+      row.dH!=null?(row.dH*100).toFixed(2):'',
+      w?'超出容差':'符合','',''
+    ].join(','));
+  }
+  const blob=new Blob([bom+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='鋼管圓心偏差報告.csv';
+  a.click();
+}
 </script>
 </body>
 </html>
