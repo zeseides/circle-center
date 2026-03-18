@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>測量工具箱</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00d4aa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="測量工具箱">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@300;400;600&display=swap');
+:root{
+  --bg:#0d1117;--surface:#161b22;--border:#21262d;
+  --accent:#00d4aa;--accent2:#3b82f6;--text:#e6edf3;--muted:#8b949e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px}
+
+.logo{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--accent);
+  letter-spacing:0.2em;text-transform:uppercase;margin-bottom:8px}
+h1{font-size:1.8rem;font-weight:600;color:var(--text);margin-bottom:6px;text-align:center}
+.sub{font-size:0.82rem;color:var(--muted);margin-bottom:48px;text-align:center}
+
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:560px}
+
+.tool-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:28px 24px;text-decoration:none;color:var(--text);
+  transition:border-color 0.2s,transform 0.15s,box-shadow 0.2s;
+  display:flex;flex-direction:column;gap:12px;
+}
+.tool-card:hover{
+  border-color:var(--accent);transform:translateY(-3px);
+  box-shadow:0 8px 32px rgba(0,212,170,0.12);
+}
+.tool-card:nth-child(2):hover{
+  border-color:var(--accent2);
+  box-shadow:0 8px 32px rgba(59,130,246,0.12);
+}
+
+.tool-icon{font-size:2rem;line-height:1}
+.tool-name{font-size:1rem;font-weight:600;letter-spacing:0.02em}
+.tool-desc{font-size:0.78rem;color:var(--muted);line-height:1.5}
+.tool-badge{
+  display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.68rem;
+  font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;margin-top:4px;
+  width:fit-content;
+}
+.badge-green{background:rgba(0,212,170,0.12);color:var(--accent)}
+.badge-blue{background:rgba(59,130,246,0.12);color:#93c5fd}
+
+.footer{margin-top:48px;font-size:0.7rem;color:#3d444d;font-family:'IBM Plex Mono',monospace;text-align:center}
+
+/* install banner */
+#installBanner{
+  display:none;background:var(--surface);border:1px solid var(--accent);
+  border-radius:10px;padding:12px 16px;margin-bottom:28px;
+  font-size:0.82rem;align-items:center;gap:10px;width:100%;max-width:560px;
+}
+#installBanner.show{display:flex}
+#installBanner span{flex:1;color:var(--text)}
+#installBtn,#dismissBtn{
+  padding:7px 14px;border-radius:6px;font-size:0.78rem;
+  cursor:pointer;border:none;font-family:'IBM Plex Mono',monospace;
+}
+#installBtn{background:var(--accent);color:#000;font-weight:600}
+#dismissBtn{background:transparent;border:1px solid var(--border);color:var(--muted)}
+
+@media(max-width:480px){
+  .tools{grid-template-columns:1fr}
+  h1{font-size:1.4rem}
+}
+</style>
+</head>
+<body>
+  <div class="logo">SURVEY TOOLKIT</div>
+  <h1>測量工具箱</h1>
+  <p class="sub">專業測量計算工具 — 支援離線使用</p>
+
+  <div id="installBanner">
+    <span>📲 加到主畫面，像 App 一樣使用</span>
+    <button id="installBtn" onclick="installPWA()">安裝</button>
+    <button id="dismissBtn" onclick="dismissInstall()">✕</button>
+  </div>
+
+  <div class="tools">
+    <a class="tool-card" href="./circle/">
+      <div class="tool-icon">⊙</div>
+      <div class="tool-name">三點定圓心</div>
+      <div class="tool-desc">輸入三個 NE 座標，自動計算圓心位置、半徑與直徑，支援語音輸入</div>
+      <div class="tool-badge badge-green">CIRCLE CENTER</div>
+    </a>
+    <a class="tool-card" href="./survey/">
+      <div class="tool-icon">📐</div>
+      <div class="tool-name">鋼管偏差分析</div>
+      <div class="tool-desc">上傳量測 TXT 與設計值，批次計算圓心偏移量與高程偏差，匯出 CSV 報告</div>
+      <div class="tool-badge badge-blue">DEVIATION REPORT</div>
+    </a>
+  </div>
+
+  <div class="footer">ALVIS STORE — SURVEY TOOLKIT v1.0</div>
+
+<script>
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('installBanner').classList.add('show');
+});
+function installPWA(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(()=>{deferredPrompt=null; document.getElementById('installBanner').classList.remove('show');});
+}
+function dismissInstall(){document.getElementById('installBanner').classList.remove('show');}
+window.addEventListener('appinstalled',()=>document.getElementById('installBanner').classList.remove('show'));
+</script>
+</body>
+</html>
