@@ -330,11 +330,10 @@ function parseMeasured(txt){
   for(const line of lines){
     const parts=line.trim().split(',');if(!parts[0]?.trim())continue;
     const name=parts[0].trim();
-    if(firstLine&&!/\d+-[1-4]$/.test(name)){
+    if(firstLine){
       stationInfo={name,n:parts[1]?.trim()||'',e:parts[2]?.trim()||'',h:parts[3]?.trim()||''};
       firstLine=false;continue;
     }
-    firstLine=false;
     const m=name.match(/^(\d+)-([1-4])$/);if(!m)continue;
     const pid=parseInt(m[1]),s=parseInt(m[2]);
     const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
