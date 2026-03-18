@@ -321,4 +321,583 @@ function deleteTpl(id){
   saveTplsToStorage();renderTplList();checkReady();
 }
 function saveTpl(){
-  const label=document.getElementById('tplLa
+  const label=document.getElementById('tplLabel').value.trim();
+  if(!label){alert('請填入範本名稱');return;}
+  const data={id:editingTplId||Date.now().toString(),label,
+    company:document.getElementById('tplCompany').value.trim(),
+    projectName:document.getElementById('tplProjectName').value.trim(),
+    location:document.getElementById('tplLocation').value.trim(),
+    supervisor:document.getElementById('tplSupervisor').value.trim(),
+    contractor:document.getElementById('tplContractor').value.trim()};
+  if(editingTplId){const idx=templates.findIndex(t=>t.id===editingTplId);templates[idx]=data;if(selectedTpl?.id===editingTplId)selectedTpl=data;}
+  else templates.push(data);
+  saveTplsToStorage();renderTplList();closeTplModal();
+}
+renderTplList();
+
+// ══ 上傳 ══
+let mText=null,dText=null,analysisRows=[],stationInfo=null,currentTol=null;
+document.getElementById('fileM').addEventListener('change',function(){
+  const f=this.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{mText=e.target.result;document.getElementById('nameM').textContent=f.name;document.getElementById('nameM').className='upload-name ok';document.getElementById('cardM').className='upload-card loaded';checkReady();};
+  r.readAsText(f,'utf-8');
+});
+document.getElementById('fileD').addEventListener('change',function(){
+  const f=this.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{dText=e.target.result;document.getElementById('nameD').textContent=f.name;document.getElementById('nameD').className='upload-name ok';document.getElementById('cardD').className='upload-card loaded';checkReady();};
+  r.readAsText(f,'utf-8');
+});
+function checkReady(){document.getElementById('runBtn').disabled=!(mText&&dText&&selectedTpl);}
+
+// ══ 解析 ══
+function circleCenter(p1,p2,p3){
+  const[e1,n1]=p1,[e2,n2]=p2,[e3,n3]=p3;
+  const a1=e2-e1,b1=n2-n1,c1=((e2**2-e1**2)+(n2**2-n1**2))/2;
+  const a2=e3-e2,b2=n3-n2,c2=((e3**2-e2**2)+(n3**2-n2**2))/2;
+  const det=a1*b2-a2*b1;if(Math.abs(det)<1e-10)return null;
+  const cx=(c1*b2-c2*b1)/det,cy=(a1*c2-a2*c1)/det;
+  return{cx,cy,r:Math.sqrt((cx-e1)**2+(cy-n1)**2)};
+}
+function parseMeasured(txt){
+  const lines=txt.split('\n');stationInfo=null;const groups={};let firstLine=true;
+  const direct={};  // 直接圓心模式
+  let mode=null;    // 'circle3' or 'direct'
+
+  for(const line of lines){
+    const parts=line.trim().split(',');if(!parts[0]?.trim())continue;
+    const name=parts[0].trim();
+    // 第一行永遠是測站
+    if(firstLine){
+      stationInfo={name,n:parts[1]?.trim()||'',e:parts[2]?.trim()||'',h:parts[3]?.trim()||''};
+      firstLine=false;continue;
+    }
+    const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
+    if(isNaN(n)||isNaN(e)||isNaN(h))continue;
+
+    // 判斷格式：數字-1~4 => 三點定圓模式
+    const m3=name.match(/^(\d+)-([1-4])$/);
+    if(m3){
+      mode='circle3';
+      const pid=parseInt(m3[1]),s=parseInt(m3[2]);
+      if(!groups[pid])groups[pid]={pts:{},h4:null};
+      if(s<=3)groups[pid].pts[s]=[e,n];else if(s===4)groups[pid].h4=h;
+      continue;
+    }
+    // 純數字 => 直接圓心模式
+    if(/^\d+$/.test(name)){
+      mode='direct';
+      const pid=parseInt(name);
+      direct[pid]={ce:e,cn:n,h,r:0};
+      continue;
+    }
+  }
+
+  // 三點定圓
+  const res={};
+  for(const[pid,data]of Object.entries(groups)){
+    const pts=data.pts;if(!pts[1]||!pts[2]||!pts[3])continue;
+    const c=circleCenter(pts[1],pts[2],pts[3]);if(!c)continue;
+    res[pid]={ce:c.cx,cn:c.cy,r:c.r,h:data.h4};
+  }
+  // 直接圓心
+  for(const[pid,d]of Object.entries(direct)) res[pid]=d;
+  return res;
+}
+function parseDesign(txt){
+  const d={};
+  for(const line of txt.split('\n')){
+    const parts=line.trim().split(',');
+    if(!/^\d+$/.test(parts[0]?.trim()))continue;
+    const pid=parseInt(parts[0]);
+    const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
+    if(isNaN(n)||isNaN(e)||isNaN(h))continue;
+    d[pid]={dn:n,de:e,dh:h};
+  }
+  return d;
+}
+
+// ══ 修正邏輯 ══
+function rand(a,b){return a+Math.random()*(b-a);}
+function correctRow(row,tolH,tolV){
+  let mn=row.mn,me=row.me,mh=row.mh;
+  let dN=mn-row.dn,dE=me-row.de;
+  const horiz=Math.sqrt(dN**2+dE**2);
+  if(horiz>tolH){const target=tolH*rand(0.95,0.98);const ratio=target/horiz;dN*=ratio;dE*=ratio;mn=row.dn+dN;me=row.de+dE;}
+  let dH=mh!==null?mh-row.dh:null;
+  if(dH!==null&&Math.abs(dH)>tolV){const target=tolV*rand(0.92,0.97);mh=row.dh+(dH>0?target:-target);dH=mh-row.dh;}
+  const newHoriz=Math.sqrt((mn-row.dn)**2+(me-row.de)**2);
+  return{...row,mn,me,mh,dN:mn-row.dn,dE:me-row.de,horiz:newHoriz,dH};
+}
+
+// ══ 主分析 ══
+function getTol(){const h=parseFloat(document.getElementById('tolH').value)||10;const v=parseFloat(document.getElementById('tolV').value)||5;return{h:h/100,v:v/100,hcm:h,vcm:v};}
+function isWarn(row,tol){return Math.abs(row.horiz)>tol.h||(row.dH!==null&&Math.abs(row.dH)>tol.v);}
+
+function runAnalysis(){
+  document.getElementById('errMsg').className='err';
+  try{
+    if(!selectedTpl){showErr('請先選擇工程範本');return;}
+    const measured=parseMeasured(mText),design=parseDesign(dText);
+    const common=Object.keys(measured).filter(k=>design[k]).map(Number).sort((a,b)=>a-b);
+    if(!common.length){showErr('找不到可比對的資料');return;}
+    currentTol=getTol();
+    analysisRows=common.map(pid=>{
+      const m=measured[pid],d=design[pid];
+      const dN=m.cn-d.dn,dE=m.ce-d.de,horiz=Math.sqrt(dN**2+dE**2);
+      const dH=m.h!==null?m.h-d.dh:null;
+      return{pid,dn:d.dn,de:d.de,dh:d.dh,mn:m.cn,me:m.ce,mh:m.h,mr:m.r,dN,dE,horiz,dH};
+    });
+    renderSummary(currentTol);renderTable(currentTol);
+    document.getElementById('results').className='';
+    document.getElementById('tolBadge').textContent=`水平容差 ±${currentTol.hcm}cm　高程容差 ±${currentTol.vcm}cm`;
+    const date=document.getElementById('rptDate').value||'report';
+    document.getElementById('dlName').value=`${date}_鋼管樁打設自主檢測`;
+  }catch(e){showErr('解析錯誤：'+e.message);}
+}
+function showErr(msg){const el=document.getElementById('errMsg');el.textContent=msg;el.className='err show';}
+function fmt(v,d=4){return v==null?'—':parseFloat(v).toFixed(d);}
+
+function renderSummary(tol){
+  const total=analysisRows.length,warns=analysisRows.filter(r=>isWarn(r,tol)).length;
+  const maxH=Math.max(...analysisRows.map(r=>r.horiz));
+  document.getElementById('sTotal').textContent=total;
+  document.getElementById('sOk').textContent=total-warns;
+  document.getElementById('sWarn').textContent=warns;
+  document.getElementById('sMaxH').textContent=(maxH*100).toFixed(2);
+}
+function renderTable(tol){
+  const tbody=document.getElementById('tableBody');tbody.innerHTML='';
+  for(const row of analysisRows){
+    const w=isWarn(row,tol),hw=Math.abs(row.horiz)>tol.h,vw=row.dH!==null&&Math.abs(row.dH)>tol.v;
+    const chip=w?'<span class="chip chip-warn">⚠ 超出</span>':'<span class="chip chip-ok">✓ 符合</span>';
+    const hc=hw?'color:var(--warn)':'color:var(--ok)',vc=vw?'color:var(--warn)':'color:var(--ok)';
+    const dNcm=(row.dN*100).toFixed(2),dEcm=(row.dE*100).toFixed(2),horizCm=(row.horiz*100).toFixed(2);
+    const dHcm=row.dH!==null?(row.dH*100).toFixed(2):null;
+    const dHStr=dHcm!==null?(parseFloat(dHcm)>=0?'+':'')+dHcm:'—';
+    tbody.innerHTML+=`<tr>
+      <td><button class="pid-btn" onclick="openCompass(${row.pid})">${row.pid}</button></td>
+      <td>${fmt(row.dn)}</td><td>${fmt(row.de)}</td><td>${fmt(row.dh)}</td>
+      <td>${fmt(row.mn)}</td><td>${fmt(row.me)}</td><td>${row.mh!=null?fmt(row.mh):'—'}</td>
+      <td>${(parseFloat(dNcm)>=0?'+':'')+dNcm}</td><td>${(parseFloat(dEcm)>=0?'+':'')+dEcm}</td>
+      <td style="${hc}">${horizCm}</td><td style="${vc}">${dHStr}</td>
+      <td style="text-align:center">${chip}</td></tr>`;
+  }
+}
+
+// ══ 羅盤 ══
+function openCompass(pid){
+  const row=analysisRows.find(r=>r.pid===pid);if(!row)return;
+  const tol=currentTol,dNcm=row.dN*100,dEcm=row.dE*100,horizCm=row.horiz*100,w=isWarn(row,tol);
+  document.getElementById('compassTitle').textContent=`管號 ${row.pid}`;
+  document.getElementById('compassSub').textContent=`圓心方位偏移　${w?'⚠ 超出容差':'✓ 符合規範'}`;
+  document.getElementById('cN').textContent=(dNcm>=0?'+':'')+dNcm.toFixed(2);
+  document.getElementById('cN').style.color=w?'var(--warn)':'var(--ok)';
+  document.getElementById('cE').textContent=(dEcm>=0?'+':'')+dEcm.toFixed(2);
+  document.getElementById('cE').style.color=w?'var(--warn)':'var(--ok)';
+  document.getElementById('cH').textContent=horizCm.toFixed(2);
+  document.getElementById('cH').style.color=w?'var(--warn)':'var(--ok)';
+  drawCompass(dNcm,dEcm,horizCm,tol.hcm,w);
+  document.getElementById('compassModal').classList.add('show');
+}
+function closeCompass(){document.getElementById('compassModal').classList.remove('show');}
+document.getElementById('compassModal').addEventListener('click',function(e){if(e.target===this)closeCompass();});
+document.getElementById('tplModal').addEventListener('click',function(e){if(e.target===this)closeTplModal();});
+function drawCompass(dNcm,dEcm,horizCm,tolCm,isOver){
+  const cvs=document.getElementById('compassCanvas'),ctx=cvs.getContext('2d');
+  const W=cvs.width,H=cvs.height,cx=W/2,cy=H/2,R=100;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='#0e1621';ctx.fill();ctx.strokeStyle='#1e3050';ctx.lineWidth=1.5;ctx.stroke();
+  const absMax=Math.max(Math.abs(dNcm),Math.abs(dEcm),tolCm)*1.3||tolCm*1.5;
+  const scale=R/absMax,tolR=tolCm*scale;
+  ctx.beginPath();ctx.arc(cx,cy,tolR,0,Math.PI*2);ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=1.2;ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx+R,cy);ctx.stroke();
+  ctx.fillStyle='#475569';ctx.font='bold 12px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText('N',cx,cy-R+13);ctx.fillText('S',cx,cy+R-3);
+  ctx.textAlign='left';ctx.fillText('E',cx+R-4,cy+4);ctx.textAlign='right';ctx.fillText('W',cx-R+4,cy+4);
+  const px=cx+dEcm*scale,py=cy-dNcm*scale,col=isOver?'#f59e0b':'#22c55e';
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.strokeStyle=col+'88';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(px,cy);ctx.lineTo(px,py);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='#0e1621';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='#3b82f6';ctx.fill();
+  ctx.fillStyle=col;ctx.font='bold 10px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText(`${horizCm.toFixed(2)} cm`,cx,cy+R+16);
+  const dirs=[];
+  if(Math.abs(dNcm)>0.005)dirs.push(dNcm>0?`北偏${dNcm.toFixed(2)}cm`:`南偏${Math.abs(dNcm).toFixed(2)}cm`);
+  if(Math.abs(dEcm)>0.005)dirs.push(dEcm>0?`東偏${dEcm.toFixed(2)}cm`:`西偏${Math.abs(dEcm).toFixed(2)}cm`);
+  if(dirs.length){ctx.fillStyle='#94a3b8';ctx.font='9px Noto Sans TC,sans-serif';ctx.fillText(dirs.join(' '),cx,cy+R+28);}
+}
+
+// ══ Excel 格式輸出 ══
+function xCell(v, s){return{v, s};}
+
+function buildSheet(rows, tpl, stn, date, tolHcm, tolVcm){
+  // 樣式定義
+  const THIN = {style:'thin', color:{rgb:'000000'}};
+  const NO   = {style:'none'};
+  const bAll = {left:THIN,right:THIN,top:THIN,bottom:THIN};
+  const bNone= {};
+  const bBot = {bottom:THIN};
+  const bRTB = {right:THIN,top:THIN,bottom:THIN};
+  const bTB  = {top:THIN,bottom:THIN};
+  const bLTB = {left:THIN,top:THIN,bottom:THIN};
+
+  const KAI12   = {name:'標楷體', sz:12};
+  const KAI11   = {name:'標楷體', sz:11};
+  const KAI11B  = {name:'標楷體', sz:11, bold:true};
+  const MING12  = {name:'新細明體', sz:12};
+  const JHEI9   = {name:'Microsoft JhengHei UI', sz:9};
+  const KAI12R  = {name:'標楷體', sz:12, color:{rgb:'FF0000'}};
+  const KAI12BK = {name:'標楷體', sz:12, color:{rgb:'000000'}};
+
+  const WHITE = {patternType:'solid', fgColor:{rgb:'FFFFFF'}};
+  const BLUE  = {patternType:'solid', fgColor:{rgb:'BDD7EE'}};
+
+  const AC  = {horizontal:'center', vertical:'center', wrapText:true};
+  const ACV = {vertical:'center', wrapText:true};
+  const ACC = {horizontal:'center', vertical:'center'};
+  const AL  = {horizontal:'left', vertical:'center', wrapText:true};
+
+  // 建立所有儲存格物件
+  const cells = {};
+  const merges = [];
+
+  function setCell(ref, v, font, fill, border, alignment, numFmt){
+    cells[ref] = {
+      v: v??'',
+      t: typeof v==='number' ? 'n' : 's',
+      s: {
+        font: font||KAI11,
+        fill: fill||WHITE,
+        border: border||bNone,
+        alignment: alignment||ACV
+      }
+    };
+    if(numFmt) cells[ref].s.numFmt = numFmt;
+    if(v===null||v===undefined) cells[ref].v='';
+  }
+
+  function merge(range, v, font, fill, border, alignment, numFmt){
+    merges.push({s:rangeStart(range), e:rangeEnd(range)});
+    // set value in top-left, fill all cells in range with border
+    const [start, end] = range.split(':');
+    const sc = colNum(start), sr = rowNum(start);
+    const ec = colNum(end),   er = rowNum(end);
+    for(let r=sr;r<=er;r++){
+      for(let c=sc;c<=ec;c++){
+        const ref = colLetter(c)+r;
+        const isTop=r===sr, isBot=r===er, isLeft=c===sc, isRight=c===ec;
+        const bdr = border ? {
+          left:  (border.left  && isLeft)  ? THIN : NO,
+          right: (border.right && isRight) ? THIN : NO,
+          top:   (border.top   && isTop)   ? THIN : NO,
+          bottom:(border.bottom&& isBot)   ? THIN : NO,
+        } : bNone;
+        cells[ref] = {
+          v: (r===sr&&c===sc) ? (v??'') : '',
+          t: typeof v==='number'?'n':'s',
+          s:{font:font||KAI11, fill:fill||WHITE, border:bdr, alignment:alignment||ACV}
+        };
+        if(numFmt&&r===sr&&c===sc) cells[ref].s.numFmt=numFmt;
+      }
+    }
+  }
+
+  function colNum(ref){ let c=0;for(const ch of ref.replace(/\d/g,''))c=c*26+ch.charCodeAt(0)-64;return c; }
+  function rowNum(ref){ return parseInt(ref.replace(/[A-Z]/g,'')); }
+  function colLetter(n){ let s='';while(n>0){s=String.fromCharCode(64+(n%26||26))+s;n=Math.floor((n-1)/26);}return s; }
+  function rangeStart(r){ const p=r.split(':')[0];return{c:colNum(p)-1,r:rowNum(p)-1}; }
+  function rangeEnd(r){   const p=r.split(':')[1];return{c:colNum(p)-1,r:rowNum(p)-1}; }
+
+  const B_ALL = {left:true,right:true,top:true,bottom:true};
+
+  // ── 行1 公司名稱 ──
+  merge('A1:M1', tpl.company, MING12, WHITE, B_ALL, ACC);
+
+  // ── 行2 表格標題 ──
+  merge('A2:M2', '鋼管樁打設自主檢測記錄表', MING12, WHITE, {bottom:true}, ACC);
+
+  // ── 行3 工程名稱 ──
+  merge('A3:B3', '工程名稱', KAI11, WHITE, B_ALL, ACV);
+  merge('C3:G3', tpl.projectName, KAI11, WHITE, B_ALL, ACV);
+  merge('H3:M3', `監造單位:${tpl.supervisor}`, KAI11, WHITE, B_ALL, ACV);
+
+  // ── 行4 工程位置 ──
+  merge('A4:B4', '工程位置', KAI11, WHITE, B_ALL, ACV);
+  merge('C4:G4', tpl.location, KAI11, WHITE, B_ALL, ACV);
+  merge('H4:M4', `承攬廠商:${tpl.contractor}`, KAI11, WHITE, B_ALL, ACV);
+
+  // ── 行5 控制點標頭 ──
+  merge('A5:C5','控制點',KAI11,WHITE,B_ALL,AC);
+  merge('D5:E5','點號',  KAI11,WHITE,B_ALL,AC);
+  merge('F5:H5','N',     KAI11,WHITE,B_ALL,AC);
+  merge('I5:K5','E',     KAI11,WHITE,B_ALL,AC);
+  merge('L5:M5','CD.',   KAI11,WHITE,B_ALL,AC);
+
+  // ── 行6 測站 ──
+  const s=stn||{name:'',n:'',e:'',h:''};
+  merge('A6:C6','測站', KAI11,WHITE,B_ALL,AC);
+  merge('D6:E6',s.name, KAI11,WHITE,B_ALL,AC);
+  const sn=parseFloat(s.n),se=parseFloat(s.e),sh=parseFloat(s.h);
+  merge('F6:H6',isNaN(sn)?s.n:sn, KAI11,WHITE,B_ALL,AC, '0.000');
+  merge('I6:K6',isNaN(se)?s.e:se, KAI11,WHITE,B_ALL,AC, '0.000');
+  merge('L6:M6',isNaN(sh)?s.h:sh, KAI11,WHITE,B_ALL,AC, '0.000');
+
+  // ── 行7 後視點 ──
+  merge('A7:C7','後視點',KAI11,WHITE,B_ALL,AC);
+  merge('D7:E7','',KAI11,WHITE,B_ALL,AC);
+  merge('F7:H7','',KAI11,WHITE,B_ALL,AC);
+  merge('I7:K7','',KAI11,WHITE,B_ALL,AC);
+  merge('L7:M7','',KAI11,WHITE,B_ALL,AC);
+
+  // ── 行8 已知點 ──
+  merge('A8:C8','已知點',KAI11,WHITE,B_ALL,AC);
+  merge('D8:E8','',KAI11,WHITE,B_ALL,AC);
+  merge('F8:H8','',KAI11,WHITE,B_ALL,AC);
+  merge('I8:K8','',KAI11,WHITE,B_ALL,AC);
+  merge('L8:M8','',KAI11,WHITE,B_ALL,AC);
+
+  // ── 行9-11 表頭 ──
+  merge('A9:A11','項次',    KAI11,WHITE,B_ALL,AC);
+  merge('B9:C11','鋼管樁編號',KAI11,WHITE,B_ALL,AC);
+  merge('D9:F9','設計值(m)', KAI11,WHITE,B_ALL,AC);
+  merge('G9:I9','實測值(m)', KAI11,WHITE,B_ALL,AC);
+  merge('J9:K9','誤差值(m)', KAI11,WHITE,B_ALL,AC);
+  merge('L9:M9','傾斜度(°)',KAI11,WHITE,B_ALL,AC);
+  // D10-I10 各自合併到11
+  for(const c of ['D','E','F','G','H','I']){
+    const vals={D:'N',E:'E',F:'CD.',G:'N',H:'E',I:'CD.'};
+    merge(`${c}10:${c}11`,vals[c],KAI11,WHITE,B_ALL,AC);
+  }
+  merge('L10:M10','壁面前後',KAI11,WHITE,B_ALL,AC);
+  // J10,K10
+  setCell('J10','座標',JHEI9,WHITE,bAll,AC);
+  setCell('K10','CD.',JHEI9,WHITE,bAll,AC);
+  // J11,K11,L11,M11
+  setCell('J11',`±${tolHcm}cm`,JHEI9,WHITE,bAll,AC);
+  setCell('K11',`±${tolVcm}cm`,JHEI9,WHITE,bAll,AC);
+  setCell('L11','設計值',JHEI9,WHITE,bAll,AC);
+  setCell('M11','實測值',JHEI9,WHITE,bAll,AC);
+
+  // ── 資料行 ──
+  const TOTAL_ROWS = 41; // rows 12~52
+  for(let i=0;i<TOTAL_ROWS;i++){
+    const r = 12+i;
+    const row = i < rows.length ? rows[i] : null;
+    const horizCm = row ? row.horiz*100 : null;
+    const dHcm    = row?.dH!=null ? row.dH*100 : null;
+    const over    = row ? (Math.abs(horizCm)>tolHcm||(dHcm!==null&&Math.abs(dHcm)>tolVcm)) : false;
+    const errFont = over ? KAI12R : KAI12BK;
+
+    // A 項次
+    setCell(`A${r}`, i+1, JHEI9, WHITE, bAll, ACC);
+
+    // B:C 管號
+    merges.push({s:{c:1,r:r-1},e:{c:2,r:r-1}});
+    const pidVal = row?.pid??'';
+    cells[`B${r}`]={v:pidVal, t:typeof pidVal==='number'?'n':'s', s:{font:KAI12BK,fill:WHITE,border:{left:THIN,top:THIN,bottom:THIN},alignment:ACC}};
+    cells[`C${r}`]={v:'', t:'s', s:{font:KAI12BK,fill:WHITE,border:{right:THIN,top:THIN,bottom:THIN},alignment:ACC}};
+
+    // D,E,F 設計值
+    if(row){
+      for(const[c,v] of [[3,row.dn],[4,row.de],[5,row.dh]]){
+        const ref=colLetter(c+1)+r;
+        cells[ref]={v:parseFloat(v.toFixed(4)),t:'n',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.000'}};
+      }
+      // G,H,I 實測值
+      for(const[c,v] of [[6,row.mn],[7,row.me],[8,row.mh]]){
+        const ref=colLetter(c+1)+r;
+        if(v!=null) cells[ref]={v:parseFloat(v.toFixed(4)),t:'n',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.000'}};
+        else cells[ref]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+      }
+      // J 水平誤差
+      cells[`J${r}`]={v:parseFloat(horizCm.toFixed(4)),t:'n',s:{font:errFont,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.00'}};
+      // K 高程誤差
+      if(dHcm!=null) cells[`K${r}`]={v:parseFloat(dHcm.toFixed(4)),t:'n',s:{font:errFont,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.0'}};
+      else cells[`K${r}`]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+    } else {
+      // 空白行
+      for(const c of ['D','E','F','G','H','I','J','K']){
+        cells[`${c}${r}`]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+      }
+    }
+
+    // L,M 傾斜度
+    cells[`L${r}`]={v:row?'≦1°':'≦1°',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+    cells[`M${r}`]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+  }
+
+  // ── 行53 備註 ──
+  merges.push({s:{c:0,r:52},e:{c:2,r:52}});
+  cells['A53']={v:'備註',t:'s',s:{font:KAI11,fill:WHITE,border:{left:THIN,top:THIN,bottom:THIN},alignment:{horizontal:'left',vertical:'center',wrapText:true,indent:1}}};
+  cells['B53']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:{top:THIN,bottom:THIN},alignment:ACV}};
+  cells['C53']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:{right:THIN,top:THIN,bottom:THIN},alignment:ACV}};
+  merges.push({s:{c:3,r:52},e:{c:12,r:52}});
+  for(let c=4;c<=13;c++){
+    const ref=colLetter(c)+'53';
+    cells[ref]={v:c===4?'':'',t:'s',s:{font:KAI11,fill:WHITE,
+      border:{left:c===4?THIN:NO,right:c===13?THIN:NO,top:THIN,bottom:THIN},
+      alignment:ACV}};
+  }
+
+  // ── 行54 簽名 ──
+  merges.push({s:{c:0,r:53},e:{c:1,r:53}});
+  cells['A54']={v:'工地主任簽名',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:AL}};
+  cells['B54']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:AL}};
+  merges.push({s:{c:5,r:53},e:{c:6,r:53}});
+  cells['F54']={v:'現場工程師簽名:',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:ACC}};
+  cells['G54']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:ACC}};
+
+  // ── 欄寬 ──
+  const colWidths=[
+    {wch:7.43},{wch:9.14},{wch:10.29},{wch:15.86},{wch:15.86},
+    {wch:10.29},{wch:15.86},{wch:15.86},{wch:10.29},{wch:15.86},
+    {wch:9.0},{wch:9.14},{wch:10.43}
+  ];
+
+  // ── 列高 ──
+  const rowHeights = {};
+  rowHeights[3]={hpx:23};rowHeights[4]={hpx:22};rowHeights[53]={hpx:43};
+
+  // Build sheet
+  const ws = {};
+  for(const [ref, cell] of Object.entries(cells)){
+    ws[ref] = cell;
+  }
+
+  // Determine range
+  ws['!ref'] = `A1:M54`;
+  ws['!merges'] = merges;
+  ws['!cols'] = colWidths;
+  ws['!rows'] = Array.from({length:54},(_,i)=>rowHeights[i+1]||{});
+
+  return ws;
+}
+
+function downloadExcel(){
+  if(!analysisRows.length){alert('請先執行分析');return;}
+  const fname=(document.getElementById('dlName').value.trim()||'鋼管樁打設自主檢測')+'.xlsx';
+  const tpl=selectedTpl,date=document.getElementById('rptDate').value||'report',tol=currentTol;
+  const correctedRows=analysisRows.map(row=>isWarn(row,tol)?correctRow(row,tol.h,tol.v):row);
+
+  try {
+    const wb={SheetNames:[],Sheets:{}};
+    const s1=`${date} (實)`, s2=`${date} (修)`;
+    wb.SheetNames.push(s1,s2);
+    wb.Sheets[s1]=buildSheet(analysisRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
+    wb.Sheets[s2]=buildSheet(correctedRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
+    XLSX.writeFile(wb, fname);
+  } catch(e) {
+    alert('下載失敗：' + e.message);
+    console.error(e);
+  }
+}
+
+// ══ AI 施工建議 ══
+const API_KEY_STORAGE = 'survey_anthropic_key';
+
+function toggleAI(){
+  const body=document.getElementById('aiBody');
+  const icon=document.getElementById('aiToggleIcon');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  icon.textContent=open?'▼ 收起':'▶ 展開';
+}
+
+function loadApiKey(){
+  const key = localStorage.getItem(API_KEY_STORAGE)||'';
+  const input = document.getElementById('apiKeyInput');
+  const status = document.getElementById('apiKeyStatus');
+  if(key){ input.value=key; status.textContent='✓ 已儲存'; status.className='api-key-status ok'; }
+}
+
+function saveApiKey(){
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const status = document.getElementById('apiKeyStatus');
+  if(!key){ status.textContent='請輸入 Key'; status.className='api-key-status'; return; }
+  if(!key.startsWith('sk-ant-')){ status.textContent='格式不對'; status.className='api-key-status'; return; }
+  localStorage.setItem(API_KEY_STORAGE, key);
+  status.textContent='✓ 已儲存'; status.className='api-key-status ok';
+}
+
+loadApiKey();
+
+async function runAIAnalysis(){
+  if(!analysisRows.length){alert('請先執行分析');return;}
+  const btn=document.getElementById('aiBtn');
+  const loading=document.getElementById('aiLoading');
+  const result=document.getElementById('aiResult');
+  btn.disabled=true;
+  loading.className='ai-loading show';
+  result.className='ai-result';
+  result.textContent='';
+
+  const tol=currentTol;
+  const warn=analysisRows.filter(r=>isWarn(r,tol));
+  const ok=analysisRows.filter(r=>!isWarn(r,tol));
+
+  // 統計偏移方向
+  const dNs=analysisRows.map(r=>r.dN*100);
+  const dEs=analysisRows.map(r=>r.dE*100);
+  const avgN=(dNs.reduce((a,b)=>a+b,0)/dNs.length).toFixed(2);
+  const avgE=(dEs.reduce((a,b)=>a+b,0)/dEs.length).toFixed(2);
+
+  const rowsSummary=analysisRows.map(r=>{
+    const horizCm=(r.horiz*100).toFixed(2);
+    const dHcm=r.dH!=null?(r.dH*100).toFixed(2):'—';
+    const over=isWarn(r,tol)?'⚠超出':'✓符合';
+    const dNcm=(r.dN*100).toFixed(2);
+    const dEcm=(r.dE*100).toFixed(2);
+    return `管號${r.pid}：水平偏移${horizCm}cm（ΔN=${dNcm}cm, ΔE=${dEcm}cm），高程偏差${dHcm}cm，${over}`;
+  }).join('\n');
+
+  const prompt=`你是一位鋼管樁施工品管專家，請根據以下檢測數據，用繁體中文給出下次施工的定位調整建議。
+
+【容差標準】水平 ±${tol.hcm}cm，高程 ±${tol.vcm}cm
+
+【各管偏移明細】
+${rowsSummary}
+
+【整體平均偏移】
+ΔN = ${avgN}cm（正=偏北，負=偏南）
+ΔE = ${avgE}cm（正=偏東，負=偏西）
+
+請直接給出：
+- 下次施工時樁機定位應往哪個方向補偏、補偏量約多少
+- 高程如有系統性偏差也請一併說明
+- 格式簡潔，像在跟現場工頭說話，不要長篇大論
+
+數字精確到 0.1cm。`;
+
+  try {
+    const apiKey = localStorage.getItem(API_KEY_STORAGE)||document.getElementById('apiKeyInput').value.trim();
+    if(!apiKey){ alert('請先輸入並儲存 Anthropic API Key');btn.disabled=false;loading.className='ai-loading';return; }
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '分析失敗，請稍後再試。';
+    result.textContent = text;
+    result.className = 'ai-result show';
+  } catch(e) {
+    result.textContent = '連線失敗：' + e.message;
+    result.className = 'ai-result show';
+  } finally {
+    btn.disabled = false;
+    loading.className = 'ai-loading';
+  }
+}
+</script>
+</body>
+</html>
