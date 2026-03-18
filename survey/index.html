@@ -224,16 +224,11 @@ tbody td:first-child{text-align:center}
 
     <div class="ai-section">
       <div class="ai-section-title" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleAI()">
-        <span>AI 施工建議 <span class="ai-tag">Claude</span></span>
+        <span>AI 施工建議 <span class="ai-tag">Gemini</span></span>
         <span id="aiToggleIcon" style="font-size:0.8rem;color:var(--muted)">▶ 展開</span>
       </div>
       <div id="aiBody" style="display:none;margin-top:12px">
-        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">需要自備 Anthropic API Key，費用由使用者自行負擔。<br>Key 僅儲存在你的瀏覽器，不會上傳至任何伺服器。</div>
-        <div class="api-key-row">
-          <input type="password" class="api-key-input" id="apiKeyInput" placeholder="sk-ant-...">
-          <button class="api-key-save" onclick="saveApiKey()">儲存</button>
-          <span class="api-key-status" id="apiKeyStatus"></span>
-        </div>
+
         <button class="ai-btn" id="aiBtn" onclick="runAIAnalysis()">🤖 分析結果，產出下次施工建議</button>
         <div class="ai-loading" id="aiLoading"><div class="ai-spinner"></div>Claude 分析中...</div>
         <div class="ai-result" id="aiResult"></div>
@@ -799,7 +794,7 @@ function downloadExcel(){
 }
 
 // ══ AI 施工建議 ══
-const API_KEY_STORAGE = 'survey_anthropic_key';
+const GEMINI_KEY = 'AIzaSyB7GRMM288j2Z9NkCfyQnHPvexD3xf-B7g';
 
 function toggleAI(){
   const body=document.getElementById('aiBody');
@@ -809,23 +804,7 @@ function toggleAI(){
   icon.textContent=open?'▼ 收起':'▶ 展開';
 }
 
-function loadApiKey(){
-  const key = localStorage.getItem(API_KEY_STORAGE)||'';
-  const input = document.getElementById('apiKeyInput');
-  const status = document.getElementById('apiKeyStatus');
-  if(key){ input.value=key; status.textContent='✓ 已儲存'; status.className='api-key-status ok'; }
-}
 
-function saveApiKey(){
-  const key = document.getElementById('apiKeyInput').value.trim();
-  const status = document.getElementById('apiKeyStatus');
-  if(!key){ status.textContent='請輸入 Key'; status.className='api-key-status'; return; }
-  if(!key.startsWith('sk-ant-')){ status.textContent='格式不對'; status.className='api-key-status'; return; }
-  localStorage.setItem(API_KEY_STORAGE, key);
-  status.textContent='✓ 已儲存'; status.className='api-key-status ok';
-}
-
-loadApiKey();
 
 async function runAIAnalysis(){
   if(!analysisRows.length){alert('請先執行分析');return;}
@@ -875,19 +854,16 @@ ${rowsSummary}
 數字精確到 0.1cm。`;
 
   try {
-    const apiKey = localStorage.getItem(API_KEY_STORAGE)||document.getElementById('apiKeyInput').value.trim();
-    if(!apiKey){ alert('請先輸入並儲存 Anthropic API Key');btn.disabled=false;loading.className='ai-loading';return; }
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompt}]
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{maxOutputTokens:800}
       })
     });
     const data = await resp.json();
-    const text = data.content?.[0]?.text || '分析失敗，請稍後再試。';
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || data.error?.message || '分析失敗，請稍後再試。';
     result.textContent = text;
     result.className = 'ai-result show';
   } catch(e) {
