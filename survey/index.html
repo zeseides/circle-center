@@ -101,13 +101,8 @@ tbody td:first-child{text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ai-section-title{font-size:0.72rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px}
 .ai-tag{display:inline-block;background:rgba(139,92,246,0.15);color:#a78bfa;font-size:0.62rem;font-family:'IBM Plex Mono',monospace;padding:2px 7px;border-radius:20px;margin-left:8px;vertical-align:middle}
-.api-key-row{display:flex;gap:8px;margin-bottom:12px;align-items:center}
-.api-key-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;outline:none;transition:border-color 0.2s}
 .api-key-input:focus{border-color:#8b5cf6}
-.api-key-save{padding:7px 14px;background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);border-radius:6px;color:#a78bfa;font-family:'IBM Plex Mono',monospace;font-size:0.75rem;cursor:pointer;white-space:nowrap;transition:all 0.2s}
 .api-key-save:hover{background:rgba(139,92,246,0.35)}
-.api-key-status{font-size:0.68rem;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-.api-key-status.ok{color:var(--ok)}
 .err{background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:10px 14px;font-size:0.8rem;color:var(--danger);margin-bottom:14px;display:none}
 .err.show{display:block}
 @media(max-width:600px){
@@ -230,11 +225,7 @@ tbody td:first-child{text-align:center}
       <div id="aiBody" style="display:none;margin-top:12px">
 
         <div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">使用 Google Gemini 免費額度。至 <a href="https://aistudio.google.com" target="_blank" style="color:#a78bfa">aistudio.google.com</a> 免費申請 Key，輸入一次後自動記住。</div>
-        <div class="api-key-row">
-          <input type="password" class="api-key-input" id="apiKeyInput" placeholder="AIza...">
-          <button class="api-key-save" onclick="saveApiKey()">儲存</button>
-          <span class="api-key-status" id="apiKeyStatus"></span>
-        </div>
+        
         <button class="ai-btn" id="aiBtn" onclick="runAIAnalysis()">🤖 分析結果，產出下次施工建議</button>
         <div class="ai-loading" id="aiLoading"><div class="ai-spinner"></div>Claude 分析中...</div>
         <div class="ai-result" id="aiResult"></div>
@@ -800,23 +791,8 @@ function downloadExcel(){
 }
 
 // ══ AI 施工建議 ══
-const API_KEY_STORAGE = 'survey_gemini_key';
 
-function loadApiKey(){
-  const key = localStorage.getItem(API_KEY_STORAGE)||'';
-  const input = document.getElementById('apiKeyInput');
-  const status = document.getElementById('apiKeyStatus');
-  if(key){ input.value=key; status.textContent='✓ 已儲存'; status.className='api-key-status ok'; }
-}
-function saveApiKey(){
-  const key = document.getElementById('apiKeyInput').value.trim();
-  const status = document.getElementById('apiKeyStatus');
-  if(!key){ status.textContent='請輸入 Key'; status.className='api-key-status'; return; }
-  if(!key.startsWith('AIza')){ status.textContent='格式不對'; status.className='api-key-status'; return; }
-  localStorage.setItem(API_KEY_STORAGE, key);
-  status.textContent='✓ 已儲存'; status.className='api-key-status ok';
-}
-loadApiKey();
+
 function toggleAI(){
   const body=document.getElementById('aiBody');
   const icon=document.getElementById('aiToggleIcon');
@@ -875,9 +851,7 @@ ${rowsSummary}
 數字精確到 0.1cm。`;
 
   try {
-        const apiKey = localStorage.getItem(API_KEY_STORAGE)||'';
-    if(!apiKey){ alert('請先輸入並儲存 Gemini API Key');btn.disabled=false;loading.className='ai-loading';return; }
-    const resp = await fetch('https://gemini-proxy.herrozonia.workers.dev/', {
+        const resp = await fetch('https://gemini-proxy.herrozonia.workers.dev/', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
