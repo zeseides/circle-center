@@ -89,6 +89,25 @@ tbody td:first-child{text-align:center}
 .cstat .cv{font-family:'IBM Plex Mono',monospace;font-size:0.95rem;font-weight:600}
 .cstat .cl{font-size:0.62rem;color:var(--muted);margin-top:2px}
 .hidden{display:none}
+.ai-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px}
+.ai-btn{width:100%;padding:11px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:0.88rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;letter-spacing:0.04em}
+.ai-btn:hover{opacity:0.88}
+.ai-btn:disabled{opacity:0.4;cursor:not-allowed}
+.ai-result{margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:0.82rem;line-height:1.7;color:#cbd5e1;white-space:pre-wrap;display:none}
+.ai-result.show{display:block}
+.ai-loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:0.78rem;font-family:'IBM Plex Mono',monospace;margin-top:10px;display:none}
+.ai-loading.show{display:flex}
+.ai-spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:#8b5cf6;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-section-title{font-size:0.72rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px}
+.ai-tag{display:inline-block;background:rgba(139,92,246,0.15);color:#a78bfa;font-size:0.62rem;font-family:'IBM Plex Mono',monospace;padding:2px 7px;border-radius:20px;margin-left:8px;vertical-align:middle}
+.api-key-row{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.api-key-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;outline:none;transition:border-color 0.2s}
+.api-key-input:focus{border-color:#8b5cf6}
+.api-key-save{padding:7px 14px;background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);border-radius:6px;color:#a78bfa;font-family:'IBM Plex Mono',monospace;font-size:0.75rem;cursor:pointer;white-space:nowrap;transition:all 0.2s}
+.api-key-save:hover{background:rgba(139,92,246,0.35)}
+.api-key-status{font-size:0.68rem;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.api-key-status.ok{color:var(--ok)}
 .err{background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:10px 14px;font-size:0.8rem;color:var(--danger);margin-bottom:14px;display:none}
 .err.show{display:block}
 @media(max-width:600px){
@@ -200,6 +219,24 @@ tbody td:first-child{text-align:center}
           </div>
         </div>
         <button class="dl-btn" onclick="downloadExcel()">⬇ 下載 Excel</button>
+      </div>
+    </div>
+
+    <div class="ai-section">
+      <div class="ai-section-title" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleAI()">
+        <span>AI 施工建議 <span class="ai-tag">Claude</span></span>
+        <span id="aiToggleIcon" style="font-size:0.8rem;color:var(--muted)">▶ 展開</span>
+      </div>
+      <div id="aiBody" style="display:none;margin-top:12px">
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.6">需要自備 Anthropic API Key，費用由使用者自行負擔。<br>Key 僅儲存在你的瀏覽器，不會上傳至任何伺服器。</div>
+        <div class="api-key-row">
+          <input type="password" class="api-key-input" id="apiKeyInput" placeholder="sk-ant-...">
+          <button class="api-key-save" onclick="saveApiKey()">儲存</button>
+          <span class="api-key-status" id="apiKeyStatus"></span>
+        </div>
+        <button class="ai-btn" id="aiBtn" onclick="runAIAnalysis()">🤖 分析結果，產出下次施工建議</button>
+        <div class="ai-loading" id="aiLoading"><div class="ai-spinner"></div>Claude 分析中...</div>
+        <div class="ai-result" id="aiResult"></div>
       </div>
     </div>
   </div>
@@ -738,6 +775,108 @@ function downloadExcel(){
   } catch(e) {
     alert('下載失敗：' + e.message);
     console.error(e);
+  }
+}
+
+// ══ AI 施工建議 ══
+const API_KEY_STORAGE = 'survey_anthropic_key';
+
+function toggleAI(){
+  const body=document.getElementById('aiBody');
+  const icon=document.getElementById('aiToggleIcon');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  icon.textContent=open?'▼ 收起':'▶ 展開';
+}
+
+function loadApiKey(){
+  const key = localStorage.getItem(API_KEY_STORAGE)||'';
+  const input = document.getElementById('apiKeyInput');
+  const status = document.getElementById('apiKeyStatus');
+  if(key){ input.value=key; status.textContent='✓ 已儲存'; status.className='api-key-status ok'; }
+}
+
+function saveApiKey(){
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const status = document.getElementById('apiKeyStatus');
+  if(!key){ status.textContent='請輸入 Key'; status.className='api-key-status'; return; }
+  if(!key.startsWith('sk-ant-')){ status.textContent='格式不對'; status.className='api-key-status'; return; }
+  localStorage.setItem(API_KEY_STORAGE, key);
+  status.textContent='✓ 已儲存'; status.className='api-key-status ok';
+}
+
+loadApiKey();
+
+async function runAIAnalysis(){
+  if(!analysisRows.length){alert('請先執行分析');return;}
+  const btn=document.getElementById('aiBtn');
+  const loading=document.getElementById('aiLoading');
+  const result=document.getElementById('aiResult');
+  btn.disabled=true;
+  loading.className='ai-loading show';
+  result.className='ai-result';
+  result.textContent='';
+
+  const tol=currentTol;
+  const warn=analysisRows.filter(r=>isWarn(r,tol));
+  const ok=analysisRows.filter(r=>!isWarn(r,tol));
+
+  // 統計偏移方向
+  const dNs=analysisRows.map(r=>r.dN*100);
+  const dEs=analysisRows.map(r=>r.dE*100);
+  const avgN=(dNs.reduce((a,b)=>a+b,0)/dNs.length).toFixed(2);
+  const avgE=(dEs.reduce((a,b)=>a+b,0)/dEs.length).toFixed(2);
+
+  const rowsSummary=analysisRows.map(r=>{
+    const horizCm=(r.horiz*100).toFixed(2);
+    const dHcm=r.dH!=null?(r.dH*100).toFixed(2):'—';
+    const over=isWarn(r,tol)?'⚠超出':'✓符合';
+    const dNcm=(r.dN*100).toFixed(2);
+    const dEcm=(r.dE*100).toFixed(2);
+    return `管號${r.pid}：水平偏移${horizCm}cm（ΔN=${dNcm}cm, ΔE=${dEcm}cm），高程偏差${dHcm}cm，${over}`;
+  }).join('
+');
+
+  const prompt=`你是一位鋼管樁施工品管專家，請根據以下檢測數據，用繁體中文給出下次施工的定位調整建議。
+
+【容差標準】水平 ±${tol.hcm}cm，高程 ±${tol.vcm}cm
+
+【各管偏移明細】
+${rowsSummary}
+
+【整體平均偏移】
+ΔN = ${avgN}cm（正=偏北，負=偏南）
+ΔE = ${avgE}cm（正=偏東，負=偏西）
+
+請直接給出：
+- 下次施工時樁機定位應往哪個方向補偏、補偏量約多少
+- 高程如有系統性偏差也請一併說明
+- 格式簡潔，像在跟現場工頭說話，不要長篇大論
+
+數字精確到 0.1cm。`;
+
+  try {
+    const apiKey = localStorage.getItem(API_KEY_STORAGE)||document.getElementById('apiKeyInput').value.trim();
+    if(!apiKey){ alert('請先輸入並儲存 Anthropic API Key');btn.disabled=false;loading.className='ai-loading';return; }
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '分析失敗，請稍後再試。';
+    result.textContent = text;
+    result.className = 'ai-result show';
+  } catch(e) {
+    result.textContent = '連線失敗：' + e.message;
+    result.className = 'ai-result show';
+  } finally {
+    btn.disabled = false;
+    loading.className = 'ai-loading';
   }
 }
 </script>
