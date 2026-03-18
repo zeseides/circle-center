@@ -727,13 +727,17 @@ function downloadExcel(){
   const tpl=selectedTpl,date=document.getElementById('rptDate').value||'report',tol=currentTol;
   const correctedRows=analysisRows.map(row=>isWarn(row,tol)?correctRow(row,tol.h,tol.v):row);
 
-  const wb={SheetNames:[],Sheets:{}};
-  const s1=`${date} (實)`, s2=`${date} (修)`;
-  wb.SheetNames.push(s1,s2);
-  wb.Sheets[s1]=buildSheet(analysisRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
-  wb.Sheets[s2]=buildSheet(correctedRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
-
-  XLSXStyle.writeFile(wb, fname);
+  try {
+    const wb={SheetNames:[],Sheets:{}};
+    const s1=`${date} (實)`, s2=`${date} (修)`;
+    wb.SheetNames.push(s1,s2);
+    wb.Sheets[s1]=buildSheet(analysisRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
+    wb.Sheets[s2]=buildSheet(correctedRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
+    XLSX.writeFile(wb, fname);
+  } catch(e) {
+    alert('下載失敗：' + e.message);
+    console.error(e);
+  }
 }
 </script>
 </body>
