@@ -21,6 +21,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-seri
 .tpl-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px}
 .tpl-item.selected{border-color:var(--accent);background:rgba(59,130,246,0.08)}
 .tpl-name{flex:1;font-size:0.88rem}
+.tpl-sub{font-size:0.7rem;color:var(--muted)}
 .tpl-actions{display:flex;gap:6px}
 .tpl-btn{padding:4px 10px;border-radius:5px;font-size:0.72rem;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'IBM Plex Mono',monospace;transition:all 0.15s}
 .tpl-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -104,10 +105,9 @@ tbody td:first-child{text-align:center}
   <a class="back" href="../">← 測量工具箱</a>
   <div class="hdr">
     <h1>📐 鋼管樁打設自主檢測</h1>
-    <p>上傳量測資料與設計值，自動產出雙分頁 Excel 報告（實測 ＋ 修正）</p>
+    <p>上傳量測資料與設計值，自動產出雙分頁格式化 Excel 報告</p>
   </div>
 
-  <!-- STEP 1 範本 -->
   <div class="section">
     <div class="section-title">
       <span>STEP 1 — 選擇工程範本</span>
@@ -117,7 +117,6 @@ tbody td:first-child{text-align:center}
     <button class="new-tpl-btn" onclick="openTplModal()">＋ 新增範本</button>
   </div>
 
-  <!-- STEP 2 上傳 -->
   <div class="section">
     <div class="section-title">STEP 2 — 上傳資料</div>
     <div class="upload-row">
@@ -136,7 +135,6 @@ tbody td:first-child{text-align:center}
     </div>
   </div>
 
-  <!-- STEP 3 設定 -->
   <div class="section">
     <div class="section-title">STEP 3 — 報告設定</div>
     <div class="field-grid">
@@ -161,7 +159,6 @@ tbody td:first-child{text-align:center}
   <div class="err" id="errMsg"></div>
   <button class="run-btn" id="runBtn" onclick="runAnalysis()" disabled>▶ 產生報告</button>
 
-  <!-- 結果 -->
   <div id="results" class="hidden">
     <div class="summary">
       <div class="stat"><div class="sv" id="sTotal">-</div><div class="sl">比對筆數</div></div>
@@ -236,29 +233,25 @@ tbody td:first-child{text-align:center}
       <div class="cstat"><div class="cv" id="cE">—</div><div class="cl">東偏 E (cm)</div></div>
       <div class="cstat"><div class="cv" id="cH">—</div><div class="cl">水平偏移 (cm)</div></div>
     </div>
-    <button class="btn-primary" style="width:100%;padding:10px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-weight:600;cursor:pointer;border:none;margin-top:0" onclick="closeCompass()">關閉</button>
+    <button class="btn-primary" style="width:100%;padding:10px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-weight:600;cursor:pointer;border:none" onclick="closeCompass()">關閉</button>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="../xlsx-js-style.bundle.js"></script>
 <script>
-// ── 範本系統 ──
+// ══ 範本系統 ══
 const TPL_KEY='survey_templates';
 let templates=JSON.parse(localStorage.getItem(TPL_KEY)||'[]');
-let selectedTpl=null, editingTplId=null;
+let selectedTpl=null,editingTplId=null;
 function saveTplsToStorage(){localStorage.setItem(TPL_KEY,JSON.stringify(templates));}
 
 function renderTplList(){
-  const el=document.getElementById('tplList');
-  el.innerHTML='';
-  if(!templates.length){
-    el.innerHTML='<div style="font-size:0.78rem;color:var(--muted);padding:6px 0">尚無範本，請點下方新增</div>';
-    return;
-  }
+  const el=document.getElementById('tplList');el.innerHTML='';
+  if(!templates.length){el.innerHTML='<div style="font-size:0.78rem;color:var(--muted);padding:6px 0">尚無範本，請點下方新增</div>';return;}
   templates.forEach(tpl=>{
     const div=document.createElement('div');
     div.className='tpl-item'+(selectedTpl?.id===tpl.id?' selected':'');
-    div.innerHTML=`<div class="tpl-name">${tpl.label}<br><span style="font-size:0.7rem;color:var(--muted)">${tpl.projectName||''}</span></div>
+    div.innerHTML=`<div class="tpl-name">${tpl.label}<br><span class="tpl-sub">${tpl.projectName||''}</span></div>
       <div class="tpl-actions">
         <button class="tpl-btn" onclick="selectTpl('${tpl.id}')">使用</button>
         <button class="tpl-btn" onclick="editTpl('${tpl.id}')">編輯</button>
@@ -267,15 +260,13 @@ function renderTplList(){
     el.appendChild(div);
   });
 }
-
-function selectTpl(id){
-  selectedTpl=templates.find(t=>t.id===id)||null;
-  document.getElementById('selectedTplName').textContent=selectedTpl?'✓ '+selectedTpl.label:'';
-  checkReady(); renderTplList();
-}
+function selectTpl(id){selectedTpl=templates.find(t=>t.id===id)||null;document.getElementById('selectedTplName').textContent=selectedTpl?'✓ '+selectedTpl.label:'';checkReady();renderTplList();}
 function openTplModal(tpl=null){
   editingTplId=tpl?tpl.id:null;
   document.getElementById('tplModalTitle').textContent=tpl?'編輯範本':'新增範本';
+  ['Label','Company','ProjectName','Location','Supervisor','Contractor'].forEach(k=>{
+    document.getElementById('tpl'+k).value=tpl?.[k.toLowerCase()]||tpl?.[(k[0].toLowerCase()+k.slice(1))]||'';
+  });
   document.getElementById('tplLabel').value=tpl?.label||'';
   document.getElementById('tplCompany').value=tpl?.company||'';
   document.getElementById('tplProjectName').value=tpl?.projectName||'';
@@ -295,21 +286,19 @@ function deleteTpl(id){
 function saveTpl(){
   const label=document.getElementById('tplLabel').value.trim();
   if(!label){alert('請填入範本名稱');return;}
-  const data={
-    id:editingTplId||Date.now().toString(), label,
+  const data={id:editingTplId||Date.now().toString(),label,
     company:document.getElementById('tplCompany').value.trim(),
     projectName:document.getElementById('tplProjectName').value.trim(),
     location:document.getElementById('tplLocation').value.trim(),
     supervisor:document.getElementById('tplSupervisor').value.trim(),
-    contractor:document.getElementById('tplContractor').value.trim(),
-  };
+    contractor:document.getElementById('tplContractor').value.trim()};
   if(editingTplId){const idx=templates.findIndex(t=>t.id===editingTplId);templates[idx]=data;if(selectedTpl?.id===editingTplId)selectedTpl=data;}
   else templates.push(data);
   saveTplsToStorage();renderTplList();closeTplModal();
 }
 renderTplList();
 
-// ── 上傳 ──
+// ══ 上傳 ══
 let mText=null,dText=null,analysisRows=[],stationInfo=null,currentTol=null;
 document.getElementById('fileM').addEventListener('change',function(){
   const f=this.files[0];if(!f)return;
@@ -325,7 +314,7 @@ document.getElementById('fileD').addEventListener('change',function(){
 });
 function checkReady(){document.getElementById('runBtn').disabled=!(mText&&dText&&selectedTpl);}
 
-// ── 解析 ──
+// ══ 解析 ══
 function circleCenter(p1,p2,p3){
   const[e1,n1]=p1,[e2,n2]=p2,[e3,n3]=p3;
   const a1=e2-e1,b1=n2-n1,c1=((e2**2-e1**2)+(n2**2-n1**2))/2;
@@ -334,42 +323,31 @@ function circleCenter(p1,p2,p3){
   const cx=(c1*b2-c2*b1)/det,cy=(a1*c2-a2*c1)/det;
   return{cx,cy,r:Math.sqrt((cx-e1)**2+(cy-n1)**2)};
 }
-
 function parseMeasured(txt){
-  const lines=txt.split('\n');
-  stationInfo=null;
-  const groups={};
-  let firstDataLine=true;
+  const lines=txt.split('\n');stationInfo=null;const groups={};let firstLine=true;
   for(const line of lines){
-    const parts=line.trim().split(',');
-    if(!parts[0]?.trim())continue;
+    const parts=line.trim().split(',');if(!parts[0]?.trim())continue;
     const name=parts[0].trim();
-    // 第一行非 -N 格式 = 測站
-    if(firstDataLine && !/\d+-[1-4]$/.test(name)){
+    if(firstLine&&!/\d+-[1-4]$/.test(name)){
       stationInfo={name,n:parts[1]?.trim()||'',e:parts[2]?.trim()||'',h:parts[3]?.trim()||''};
-      firstDataLine=false; continue;
+      firstLine=false;continue;
     }
-    firstDataLine=false;
-    const m=name.match(/^(\d+)-([1-4])$/);
-    if(!m)continue;
+    firstLine=false;
+    const m=name.match(/^(\d+)-([1-4])$/);if(!m)continue;
     const pid=parseInt(m[1]),s=parseInt(m[2]);
     const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
     if(isNaN(n)||isNaN(e)||isNaN(h))continue;
     if(!groups[pid])groups[pid]={pts:{},h4:null};
-    if(s<=3)groups[pid].pts[s]=[e,n];
-    else if(s===4)groups[pid].h4=h;
+    if(s<=3)groups[pid].pts[s]=[e,n];else if(s===4)groups[pid].h4=h;
   }
   const res={};
   for(const[pid,data]of Object.entries(groups)){
-    const pts=data.pts;
-    if(!pts[1]||!pts[2]||!pts[3])continue;
-    const c=circleCenter(pts[1],pts[2],pts[3]);
-    if(!c)continue;
+    const pts=data.pts;if(!pts[1]||!pts[2]||!pts[3])continue;
+    const c=circleCenter(pts[1],pts[2],pts[3]);if(!c)continue;
     res[pid]={ce:c.cx,cn:c.cy,r:c.r,h:data.h4};
   }
   return res;
 }
-
 function parseDesign(txt){
   const d={};
   for(const line of txt.split('\n')){
@@ -383,34 +361,21 @@ function parseDesign(txt){
   return d;
 }
 
-// ── 修正邏輯 ──
+// ══ 修正邏輯 ══
 function rand(a,b){return a+Math.random()*(b-a);}
 function correctRow(row,tolH,tolV){
   let mn=row.mn,me=row.me,mh=row.mh;
   let dN=mn-row.dn,dE=me-row.de;
   const horiz=Math.sqrt(dN**2+dE**2);
-  if(horiz>tolH){
-    const target=tolH*rand(0.95,0.98);
-    const ratio=target/horiz;
-    dN*=ratio; dE*=ratio;
-    mn=row.dn+dN; me=row.de+dE;
-  }
+  if(horiz>tolH){const target=tolH*rand(0.95,0.98);const ratio=target/horiz;dN*=ratio;dE*=ratio;mn=row.dn+dN;me=row.de+dE;}
   let dH=mh!==null?mh-row.dh:null;
-  if(dH!==null&&Math.abs(dH)>tolV){
-    const target=tolV*rand(0.92,0.97);
-    mh=row.dh+(dH>0?target:-target);
-    dH=mh-row.dh;
-  }
+  if(dH!==null&&Math.abs(dH)>tolV){const target=tolV*rand(0.92,0.97);mh=row.dh+(dH>0?target:-target);dH=mh-row.dh;}
   const newHoriz=Math.sqrt((mn-row.dn)**2+(me-row.de)**2);
   return{...row,mn,me,mh,dN:mn-row.dn,dE:me-row.de,horiz:newHoriz,dH};
 }
 
-// ── 主分析 ──
-function getTol(){
-  const h=parseFloat(document.getElementById('tolH').value)||10;
-  const v=parseFloat(document.getElementById('tolV').value)||5;
-  return{h:h/100,v:v/100,hcm:h,vcm:v};
-}
+// ══ 主分析 ══
+function getTol(){const h=parseFloat(document.getElementById('tolH').value)||10;const v=parseFloat(document.getElementById('tolV').value)||5;return{h:h/100,v:v/100,hcm:h,vcm:v};}
 function isWarn(row,tol){return Math.abs(row.horiz)>tol.h||(row.dH!==null&&Math.abs(row.dH)>tol.v);}
 
 function runAnalysis(){
@@ -419,12 +384,11 @@ function runAnalysis(){
     if(!selectedTpl){showErr('請先選擇工程範本');return;}
     const measured=parseMeasured(mText),design=parseDesign(dText);
     const common=Object.keys(measured).filter(k=>design[k]).map(Number).sort((a,b)=>a-b);
-    if(!common.length){showErr('找不到可比對的資料，請確認管號格式（需含 -1 -2 -3 -4）');return;}
+    if(!common.length){showErr('找不到可比對的資料');return;}
     currentTol=getTol();
     analysisRows=common.map(pid=>{
       const m=measured[pid],d=design[pid];
-      const dN=m.cn-d.dn,dE=m.ce-d.de;
-      const horiz=Math.sqrt(dN**2+dE**2);
+      const dN=m.cn-d.dn,dE=m.ce-d.de,horiz=Math.sqrt(dN**2+dE**2);
       const dH=m.h!==null?m.h-d.dh:null;
       return{pid,dn:d.dn,de:d.de,dh:d.dh,mn:m.cn,me:m.ce,mh:m.h,mr:m.r,dN,dE,horiz,dH};
     });
@@ -446,7 +410,6 @@ function renderSummary(tol){
   document.getElementById('sWarn').textContent=warns;
   document.getElementById('sMaxH').textContent=(maxH*100).toFixed(2);
 }
-
 function renderTable(tol){
   const tbody=document.getElementById('tableBody');tbody.innerHTML='';
   for(const row of analysisRows){
@@ -466,7 +429,7 @@ function renderTable(tol){
   }
 }
 
-// ── 羅盤 ──
+// ══ 羅盤 ══
 function openCompass(pid){
   const row=analysisRows.find(r=>r.pid===pid);if(!row)return;
   const tol=currentTol,dNcm=row.dN*100,dEcm=row.dE*100,horizCm=row.horiz*100,w=isWarn(row,tol);
@@ -483,7 +446,6 @@ function openCompass(pid){
 }
 function closeCompass(){document.getElementById('compassModal').classList.remove('show');}
 document.getElementById('compassModal').addEventListener('click',function(e){if(e.target===this)closeCompass();});
-
 function drawCompass(dNcm,dEcm,horizCm,tolCm,isOver){
   const cvs=document.getElementById('compassCanvas'),ctx=cvs.getContext('2d');
   const W=cvs.width,H=cvs.height,cx=W/2,cy=H/2,R=100;
@@ -513,37 +475,250 @@ function drawCompass(dNcm,dEcm,horizCm,tolCm,isOver){
   if(dirs.length){ctx.fillStyle='#94a3b8';ctx.font='9px Noto Sans TC,sans-serif';ctx.fillText(dirs.join(' '),cx,cy+R+28);}
 }
 
-// ── Excel 下載 ──
-function makeSheetData(rows, tpl, stn, date, label, tol){
-  const data=[];
-  data.push([tpl.company,'','','','','','','','','','','','']);
-  data.push(['鋼管樁打設自主檢測記錄表','','','','','','','','','','','','']);
-  data.push(['工程名稱','',tpl.projectName,'','','','','監造單位:'+tpl.supervisor,'','','','','']);
-  data.push(['工程位置','',tpl.location,'','','','','承攬廠商:'+tpl.contractor,'','','','','']);
-  data.push(['控制點','','','點號','','N','','','E','','','CD.','']);
+// ══ Excel 格式輸出 ══
+function xCell(v, s){return{v, s};}
+
+function buildSheet(rows, tpl, stn, date, tolHcm, tolVcm){
+  // 樣式定義
+  const THIN = {style:'thin', color:{rgb:'000000'}};
+  const NO   = {style:'none'};
+  const bAll = {left:THIN,right:THIN,top:THIN,bottom:THIN};
+  const bNone= {};
+  const bBot = {bottom:THIN};
+  const bRTB = {right:THIN,top:THIN,bottom:THIN};
+  const bTB  = {top:THIN,bottom:THIN};
+  const bLTB = {left:THIN,top:THIN,bottom:THIN};
+
+  const KAI12   = {name:'標楷體', sz:12};
+  const KAI11   = {name:'標楷體', sz:11};
+  const KAI11B  = {name:'標楷體', sz:11, bold:true};
+  const MING12  = {name:'新細明體', sz:12};
+  const JHEI9   = {name:'Microsoft JhengHei UI', sz:9};
+  const KAI12R  = {name:'標楷體', sz:12, color:{rgb:'FF0000'}};
+  const KAI12BK = {name:'標楷體', sz:12, color:{rgb:'000000'}};
+
+  const WHITE = {patternType:'solid', fgColor:{rgb:'FFFFFF'}};
+  const BLUE  = {patternType:'solid', fgColor:{rgb:'BDD7EE'}};
+
+  const AC  = {horizontal:'center', vertical:'center', wrapText:true};
+  const ACV = {vertical:'center', wrapText:true};
+  const ACC = {horizontal:'center', vertical:'center'};
+  const AL  = {horizontal:'left', vertical:'center', wrapText:true};
+
+  // 建立所有儲存格物件
+  const cells = {};
+  const merges = [];
+
+  function setCell(ref, v, font, fill, border, alignment, numFmt){
+    cells[ref] = {
+      v: v??'',
+      t: typeof v==='number' ? 'n' : 's',
+      s: {
+        font: font||KAI11,
+        fill: fill||WHITE,
+        border: border||bNone,
+        alignment: alignment||ACV
+      }
+    };
+    if(numFmt) cells[ref].s.numFmt = numFmt;
+    if(v===null||v===undefined) cells[ref].v='';
+  }
+
+  function merge(range, v, font, fill, border, alignment, numFmt){
+    merges.push({s:rangeStart(range), e:rangeEnd(range)});
+    // set value in top-left, fill all cells in range with border
+    const [start, end] = range.split(':');
+    const sc = colNum(start), sr = rowNum(start);
+    const ec = colNum(end),   er = rowNum(end);
+    for(let r=sr;r<=er;r++){
+      for(let c=sc;c<=ec;c++){
+        const ref = colLetter(c)+r;
+        const isTop=r===sr, isBot=r===er, isLeft=c===sc, isRight=c===ec;
+        const bdr = border ? {
+          left:  (border.left  && isLeft)  ? THIN : NO,
+          right: (border.right && isRight) ? THIN : NO,
+          top:   (border.top   && isTop)   ? THIN : NO,
+          bottom:(border.bottom&& isBot)   ? THIN : NO,
+        } : bNone;
+        cells[ref] = {
+          v: (r===sr&&c===sc) ? (v??'') : '',
+          t: typeof v==='number'?'n':'s',
+          s:{font:font||KAI11, fill:fill||WHITE, border:bdr, alignment:alignment||ACV}
+        };
+        if(numFmt&&r===sr&&c===sc) cells[ref].s.numFmt=numFmt;
+      }
+    }
+  }
+
+  function colNum(ref){ let c=0;for(const ch of ref.replace(/\d/g,''))c=c*26+ch.charCodeAt(0)-64;return c; }
+  function rowNum(ref){ return parseInt(ref.replace(/[A-Z]/g,'')); }
+  function colLetter(n){ let s='';while(n>0){s=String.fromCharCode(64+(n%26||26))+s;n=Math.floor((n-1)/26);}return s; }
+  function rangeStart(r){ const p=r.split(':')[0];return{c:colNum(p)-1,r:rowNum(p)-1}; }
+  function rangeEnd(r){   const p=r.split(':')[1];return{c:colNum(p)-1,r:rowNum(p)-1}; }
+
+  const B_ALL = {left:true,right:true,top:true,bottom:true};
+
+  // ── 行1 公司名稱 ──
+  merge('A1:M1', tpl.company, MING12, WHITE, B_ALL, ACC);
+
+  // ── 行2 表格標題 ──
+  merge('A2:M2', '鋼管樁打設自主檢測記錄表', MING12, WHITE, {bottom:true}, ACC);
+
+  // ── 行3 工程名稱 ──
+  merge('A3:B3', '工程名稱', KAI11, WHITE, B_ALL, ACV);
+  merge('C3:G3', tpl.projectName, KAI11, WHITE, B_ALL, ACV);
+  merge('H3:M3', `監造單位:${tpl.supervisor}`, KAI11, WHITE, B_ALL, ACV);
+
+  // ── 行4 工程位置 ──
+  merge('A4:B4', '工程位置', KAI11, WHITE, B_ALL, ACV);
+  merge('C4:G4', tpl.location, KAI11, WHITE, B_ALL, ACV);
+  merge('H4:M4', `承攬廠商:${tpl.contractor}`, KAI11, WHITE, B_ALL, ACV);
+
+  // ── 行5 控制點標頭 ──
+  merge('A5:C5','控制點',KAI11,WHITE,B_ALL,AC);
+  merge('D5:E5','點號',  KAI11,WHITE,B_ALL,AC);
+  merge('F5:H5','N',     KAI11,WHITE,B_ALL,AC);
+  merge('I5:K5','E',     KAI11,WHITE,B_ALL,AC);
+  merge('L5:M5','CD.',   KAI11,WHITE,B_ALL,AC);
+
+  // ── 行6 測站 ──
   const s=stn||{name:'',n:'',e:'',h:''};
-  data.push(['測站','','',s.name,'',s.n?parseFloat(s.n):'',' ','',s.e?parseFloat(s.e):'',' ',' ',s.h?parseFloat(s.h):'',' ']);
-  data.push(['後視點','','','','','','','','','','','','']);
-  data.push(['已知點','','','','','','','','','','','','']);
-  data.push(['項次','鋼管樁編號','','設計值(m)','','','實測值(m)','','','誤差值(m)','','傾斜度(°)','']);
-  data.push(['','','','N','E','CD.','N','E','CD.','座標','CD.','壁面前後','']);
-  data.push(['','','','','','','','','',`±${tol.hcm}cm`,`±${tol.vcm}cm`,'設計值','實測值']);
-  rows.forEach((row,i)=>{
-    data.push([
-      i+1, row.pid, '',
-      parseFloat(row.dn.toFixed(4)),parseFloat(row.de.toFixed(4)),parseFloat(row.dh.toFixed(4)),
-      parseFloat(row.mn.toFixed(4)),parseFloat(row.me.toFixed(4)),row.mh!=null?parseFloat(row.mh.toFixed(4)):'',
-      parseFloat((row.horiz*100).toFixed(4)),
-      row.dH!=null?parseFloat((row.dH*100).toFixed(4)):'',
-      '≦1°',''
-    ]);
-  });
-  // 空白預留行
-  for(let i=rows.length;i<28;i++) data.push([i+1,'','','','','','','','','','','≦1°','']);
-  data.push(['','','','','','','','','','','','','']);
-  data.push(['備註','','','','','','','','','','','','']);
-  data.push(['工地主任簽名','','','','','現場工程師簽名:','','','','','','','']);
-  return data;
+  merge('A6:C6','測站', KAI11,WHITE,B_ALL,AC);
+  merge('D6:E6',s.name, KAI11,WHITE,B_ALL,AC);
+  const sn=parseFloat(s.n),se=parseFloat(s.e),sh=parseFloat(s.h);
+  merge('F6:H6',isNaN(sn)?s.n:sn, KAI11,WHITE,B_ALL,AC, '0.000');
+  merge('I6:K6',isNaN(se)?s.e:se, KAI11,WHITE,B_ALL,AC, '0.000');
+  merge('L6:M6',isNaN(sh)?s.h:sh, KAI11,WHITE,B_ALL,AC, '0.000');
+
+  // ── 行7 後視點 ──
+  merge('A7:C7','後視點',KAI11,WHITE,B_ALL,AC);
+  merge('D7:E7','',KAI11,WHITE,B_ALL,AC);
+  merge('F7:H7','',KAI11,WHITE,B_ALL,AC);
+  merge('I7:K7','',KAI11,WHITE,B_ALL,AC);
+  merge('L7:M7','',KAI11,WHITE,B_ALL,AC);
+
+  // ── 行8 已知點 ──
+  merge('A8:C8','已知點',KAI11,WHITE,B_ALL,AC);
+  merge('D8:E8','',KAI11,WHITE,B_ALL,AC);
+  merge('F8:H8','',KAI11,WHITE,B_ALL,AC);
+  merge('I8:K8','',KAI11,WHITE,B_ALL,AC);
+  merge('L8:M8','',KAI11,WHITE,B_ALL,AC);
+
+  // ── 行9-11 表頭 ──
+  merge('A9:A11','項次',    KAI11,WHITE,B_ALL,AC);
+  merge('B9:C11','鋼管樁編號',KAI11,WHITE,B_ALL,AC);
+  merge('D9:F9','設計值(m)', KAI11,WHITE,B_ALL,AC);
+  merge('G9:I9','實測值(m)', KAI11,WHITE,B_ALL,AC);
+  merge('J9:K9','誤差值(m)', KAI11,WHITE,B_ALL,AC);
+  merge('L9:M9','傾斜度(°)',KAI11,WHITE,B_ALL,AC);
+  // D10-I10 各自合併到11
+  for(const c of ['D','E','F','G','H','I']){
+    const vals={D:'N',E:'E',F:'CD.',G:'N',H:'E',I:'CD.'};
+    merge(`${c}10:${c}11`,vals[c],KAI11,WHITE,B_ALL,AC);
+  }
+  merge('L10:M10','壁面前後',KAI11,WHITE,B_ALL,AC);
+  // J10,K10
+  setCell('J10','座標',JHEI9,WHITE,bAll,AC);
+  setCell('K10','CD.',JHEI9,WHITE,bAll,AC);
+  // J11,K11,L11,M11
+  setCell('J11',`±${tolHcm}cm`,JHEI9,WHITE,bAll,AC);
+  setCell('K11',`±${tolVcm}cm`,JHEI9,WHITE,bAll,AC);
+  setCell('L11','設計值',JHEI9,WHITE,bAll,AC);
+  setCell('M11','實測值',JHEI9,WHITE,bAll,AC);
+
+  // ── 資料行 ──
+  const TOTAL_ROWS = 41; // rows 12~52
+  for(let i=0;i<TOTAL_ROWS;i++){
+    const r = 12+i;
+    const row = i < rows.length ? rows[i] : null;
+    const horizCm = row ? row.horiz*100 : null;
+    const dHcm    = row?.dH!=null ? row.dH*100 : null;
+    const over    = row ? (Math.abs(horizCm)>tolHcm||(dHcm!==null&&Math.abs(dHcm)>tolVcm)) : false;
+    const errFont = over ? KAI12R : KAI12BK;
+
+    // A 項次
+    setCell(`A${r}`, i+1, JHEI9, WHITE, bAll, ACC);
+
+    // B:C 管號
+    merges.push({s:{c:1,r:r-1},e:{c:2,r:r-1}});
+    const pidVal = row?.pid??'';
+    cells[`B${r}`]={v:pidVal, t:typeof pidVal==='number'?'n':'s', s:{font:KAI12BK,fill:WHITE,border:{left:THIN,top:THIN,bottom:THIN},alignment:ACC}};
+    cells[`C${r}`]={v:'', t:'s', s:{font:KAI12BK,fill:WHITE,border:{right:THIN,top:THIN,bottom:THIN},alignment:ACC}};
+
+    // D,E,F 設計值
+    if(row){
+      for(const[c,v] of [[3,row.dn],[4,row.de],[5,row.dh]]){
+        const ref=colLetter(c+1)+r;
+        cells[ref]={v:parseFloat(v.toFixed(4)),t:'n',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.000'}};
+      }
+      // G,H,I 實測值
+      for(const[c,v] of [[6,row.mn],[7,row.me],[8,row.mh]]){
+        const ref=colLetter(c+1)+r;
+        if(v!=null) cells[ref]={v:parseFloat(v.toFixed(4)),t:'n',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.000'}};
+        else cells[ref]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+      }
+      // J 水平誤差
+      cells[`J${r}`]={v:parseFloat(horizCm.toFixed(4)),t:'n',s:{font:errFont,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.00'}};
+      // K 高程誤差
+      if(dHcm!=null) cells[`K${r}`]={v:parseFloat(dHcm.toFixed(4)),t:'n',s:{font:errFont,fill:WHITE,border:bAll,alignment:AC,numFmt:'0.0'}};
+      else cells[`K${r}`]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+    } else {
+      // 空白行
+      for(const c of ['D','E','F','G','H','I','J','K']){
+        cells[`${c}${r}`]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+      }
+    }
+
+    // L,M 傾斜度
+    cells[`L${r}`]={v:row?'≦1°':'≦1°',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+    cells[`M${r}`]={v:'',t:'s',s:{font:KAI12BK,fill:WHITE,border:bAll,alignment:AC}};
+  }
+
+  // ── 行53 備註 ──
+  merges.push({s:{c:0,r:52},e:{c:2,r:52}});
+  cells['A53']={v:'備註',t:'s',s:{font:KAI11,fill:WHITE,border:{left:THIN,top:THIN,bottom:THIN},alignment:{horizontal:'left',vertical:'center',wrapText:true,indent:1}}};
+  cells['B53']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:{top:THIN,bottom:THIN},alignment:ACV}};
+  cells['C53']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:{right:THIN,top:THIN,bottom:THIN},alignment:ACV}};
+  merges.push({s:{c:3,r:52},e:{c:12,r:52}});
+  for(let c=4;c<=13;c++){
+    const ref=colLetter(c)+'53';
+    cells[ref]={v:c===4?'':'',t:'s',s:{font:KAI11,fill:WHITE,
+      border:{left:c===4?THIN:NO,right:c===13?THIN:NO,top:THIN,bottom:THIN},
+      alignment:ACV}};
+  }
+
+  // ── 行54 簽名 ──
+  merges.push({s:{c:0,r:53},e:{c:1,r:53}});
+  cells['A54']={v:'工地主任簽名',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:AL}};
+  cells['B54']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:AL}};
+  merges.push({s:{c:5,r:53},e:{c:6,r:53}});
+  cells['F54']={v:'現場工程師簽名:',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:ACC}};
+  cells['G54']={v:'',t:'s',s:{font:KAI11,fill:WHITE,border:bNone,alignment:ACC}};
+
+  // ── 欄寬 ──
+  const colWidths=[
+    {wch:7.43},{wch:9.14},{wch:10.29},{wch:15.86},{wch:15.86},
+    {wch:10.29},{wch:15.86},{wch:15.86},{wch:10.29},{wch:15.86},
+    {wch:9.0},{wch:9.14},{wch:10.43}
+  ];
+
+  // ── 列高 ──
+  const rowHeights = {};
+  rowHeights[3]={hpx:23};rowHeights[4]={hpx:22};rowHeights[53]={hpx:43};
+
+  // Build sheet
+  const ws = {};
+  for(const [ref, cell] of Object.entries(cells)){
+    ws[ref] = cell;
+  }
+
+  // Determine range
+  ws['!ref'] = `A1:M54`;
+  ws['!merges'] = merges;
+  ws['!cols'] = colWidths;
+  ws['!rows'] = Array.from({length:54},(_,i)=>rowHeights[i+1]||{});
+
+  return ws;
 }
 
 function downloadExcel(){
@@ -551,19 +726,14 @@ function downloadExcel(){
   const fname=(document.getElementById('dlName').value.trim()||'鋼管樁打設自主檢測')+'.xlsx';
   const tpl=selectedTpl,date=document.getElementById('rptDate').value||'report',tol=currentTol;
   const correctedRows=analysisRows.map(row=>isWarn(row,tol)?correctRow(row,tol.h,tol.v):row);
-  const wb=XLSX.utils.book_new();
 
-  // 實測分頁
-  const ws1=XLSX.utils.aoa_to_sheet(makeSheetData(analysisRows,tpl,stationInfo,date,'實',tol));
-  ws1['!cols']=[{wch:6},{wch:10},{wch:2},{wch:16},{wch:16},{wch:8},{wch:16},{wch:16},{wch:8},{wch:12},{wch:8},{wch:10},{wch:8}];
-  XLSX.utils.book_append_sheet(wb,ws1,`${date} (實)`);
+  const wb={SheetNames:[],Sheets:{}};
+  const s1=`${date} (實)`, s2=`${date} (修)`;
+  wb.SheetNames.push(s1,s2);
+  wb.Sheets[s1]=buildSheet(analysisRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
+  wb.Sheets[s2]=buildSheet(correctedRows, tpl, stationInfo, date, tol.hcm, tol.vcm);
 
-  // 修正分頁
-  const ws2=XLSX.utils.aoa_to_sheet(makeSheetData(correctedRows,tpl,stationInfo,date,'修',tol));
-  ws2['!cols']=[{wch:6},{wch:10},{wch:2},{wch:16},{wch:16},{wch:8},{wch:16},{wch:16},{wch:8},{wch:12},{wch:8},{wch:10},{wch:8}];
-  XLSX.utils.book_append_sheet(wb,ws2,`${date} (修)`);
-
-  XLSX.writeFile(wb,fname);
+  XLSXStyle.writeFile(wb, fname);
 }
 </script>
 </body>
