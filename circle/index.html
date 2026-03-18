@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三點定圓心 — 測量工具箱</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+:root{
+  --bg:#0d1117;--surface:#161b22;--border:#21262d;
+  --accent:#00d4aa;--text:#e6edf3;--muted:#8b949e;--error:#f85149;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px}
+.container{width:100%;max-width:520px}
+
+/* back nav */
+.back{display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted);text-decoration:none;font-family:'Share Tech Mono',monospace;letter-spacing:0.06em;margin-bottom:20px;transition:color 0.2s}
+.back:hover{color:var(--accent)}
+
+h1{font-size:1.1rem;font-weight:500;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;font-family:'Share Tech Mono',monospace}
+.subtitle{font-size:0.75rem;color:var(--muted);margin-bottom:28px;letter-spacing:0.05em}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:16px}
+.point-label{font-family:'Share Tech Mono',monospace;font-size:0.8rem;color:var(--accent);letter-spacing:0.1em;margin-bottom:12px}
+.row{display:flex;flex-direction:column;gap:10px}
+.field{width:100%}
+.field label{display:block;font-size:0.72rem;color:var(--muted);margin-bottom:5px;letter-spacing:0.06em}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.9rem;outline:none;transition:border-color 0.2s}
+.field input:focus{border-color:var(--accent)}
+.field input::placeholder{color:#3d444d}
+.input-wrap{display:flex;gap:6px;align-items:center}
+.input-wrap input{flex:1}
+.mic-btn{width:38px;height:38px;min-width:38px;padding:0;margin:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.2s,color 0.2s;letter-spacing:0}
+.mic-btn:hover{border-color:var(--accent);color:var(--accent);opacity:1}
+.voice-hint{font-size:0.68rem;color:var(--muted);margin-top:8px}
+button{width:100%;padding:12px;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:0.9rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:opacity 0.15s,transform 0.1s;margin-bottom:16px}
+button:hover{opacity:0.88}
+button:active{transform:scale(0.98)}
+
+/* voice modal */
+#voiceModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:999;align-items:flex-end;justify-content:center}
+#voiceModal.show{display:flex}
+#voiceBox{background:var(--surface);border:1px solid var(--accent);border-radius:18px 18px 0 0;padding:24px 20px 40px;width:100%;max-width:520px}
+#voiceLabel{font-size:0.72rem;color:var(--accent);font-family:'Share Tech Mono',monospace;letter-spacing:0.1em;margin-bottom:6px}
+#voiceSubLabel{font-size:0.7rem;color:var(--muted);margin-bottom:14px}
+#voiceInput{width:100%;background:var(--bg);border:2px solid var(--accent);border-radius:8px;padding:14px 16px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:1.3rem;outline:none;margin-bottom:14px;caret-color:var(--accent)}
+.modal-btns{display:flex;gap:10px}
+.modal-btns button{flex:1;margin:0}
+#modalCancel{background:transparent;border:1px solid var(--border);color:var(--muted)}
+
+.result-card{background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:20px;display:none}
+.result-card.show{display:block}
+.result-title{font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--muted);letter-spacing:0.1em;margin-bottom:14px}
+.result-row{display:flex;gap:16px;margin-bottom:10px}
+.result-item{flex:1}
+.result-item .rlabel{font-size:0.7rem;color:var(--muted);margin-bottom:4px}
+.result-item .rvalue{font-family:'Share Tech Mono',monospace;font-size:1.15rem;color:var(--accent);font-weight:700}
+.radius-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:16px}
+.copy-btn{margin-top:14px;background:transparent;border:1px solid var(--accent);color:var(--accent);padding:8px;font-size:0.78rem;font-weight:400;letter-spacing:0.08em}
+.copy-btn:hover{background:rgba(0,212,170,0.08);opacity:1}
+.error-msg{background:rgba(248,81,73,0.12);border:1px solid var(--error);border-radius:8px;padding:12px 16px;font-size:0.82rem;color:var(--error);display:none;margin-bottom:16px}
+.error-msg.show{display:block}
+.preview{margin-top:16px;border-top:1px solid var(--border);padding-top:14px}
+canvas{display:block;margin:0 auto;border-radius:6px;background:var(--bg);max-width:100%}
+</style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="../">← 測量工具箱</a>
+  <h1>⊙ 三點定圓心</h1>
+  <p class="subtitle">CIRCLE CENTER FROM 3 POINTS — 測量計算工具</p>
+
+  <div class="card">
+    <div class="point-label">P1 — 第一點</div>
+    <div class="row">
+      <div class="field"><label>N（縱坐標）</label><div class="input-wrap"><input id="n1" type="text" inputmode="decimal" placeholder="0.000" onblur="autoConvert(this)"><button class="mic-btn" onclick="openVoice('n1','P1 · N 縱坐標')">🎤</button></div></div>
+      <div class="field"><label>E（橫坐標）</label><div class="input-wrap"><input id="e1" type="text" inputmode="decimal" placeholder="0.000" onblur="autoConvert(this)"><button class="mic-btn" onclick="openVoice('e1','P1 · E 橫坐標')">🎤</button></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="point-label">P2 — 第二點</div>
+    <div class="row">
+      <div class="field"><label>N（縱坐標）</label><div class="input-wrap"><input id="n2" type="text" inputmode="decimal" placeholder="0.000" onblur="autoConvert(this)"><button class="mic-btn" onclick="openVoice('n2','P2 · N 縱坐標')">🎤</button></div></div>
+      <div class="field"><label>E（橫坐標）</label><div class="input-wrap"><input id="e2" type="text" inputmode="decimal" placeholder="0.000" onblur="autoConvert(this)"><button class="mic-btn" onclick="openVoice('e2','P2 · E 橫坐標')">🎤</button></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="point-label">P3 — 第三點</div>
+    <div class="row">
+      <div class="field"><label>N（縱坐標）</label><div class="input-wrap"><input id="n3" type="text" inputmode="decimal" placeholder="0.000" onblur="autoConvert(this)"><button class="mic-btn" onclick="openVoice('n3','P3 · N 縱坐標')">🎤</button></div></div>
+      <div class="field"><label>E（橫坐標）</label><div class="input-wrap"><input id="e3" type="text" inputmode="decimal" placeholder="0.000" onblur="autoConvert(this)"><button class="mic-btn" onclick="openVoice('e3','P3 · E 橫坐標')">🎤</button></div></div>
+    </div>
+  </div>
+  <p class="voice-hint">🎤 按麥克風 → 彈出輸入框 → 用 Gboard 鍵盤語音唸數字 → 按確認</p>
+
+  <div class="error-msg" id="errMsg"></div>
+  <button onclick="calculate()">▶ 計算圓心</button>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-title">RESULT — 計算結果</div>
+    <div class="result-row">
+      <div class="result-item"><div class="rlabel">圓心 N（縱坐標）</div><div class="rvalue" id="resN">—</div></div>
+      <div class="result-item"><div class="rlabel">圓心 E（橫坐標）</div><div class="rvalue" id="resE">—</div></div>
+    </div>
+    <div class="radius-row">
+      <div class="result-item"><div class="rlabel">半徑 R</div><div class="rvalue" id="resR">—</div></div>
+      <div class="result-item"><div class="rlabel">直徑 D</div><div class="rvalue" id="resD">—</div></div>
+    </div>
+    <button class="copy-btn" onclick="copyResult()">⎘ 複製結果</button>
+    <div class="preview"><canvas id="cvs" width="460" height="240"></canvas></div>
+  </div>
+</div>
+
+<!-- 語音 Modal -->
+<div id="voiceModal">
+  <div id="voiceBox">
+    <div id="voiceLabel">語音輸入</div>
+    <div id="voiceSubLabel">點輸入框後按 Gboard 鍵盤上的 🎤 唸數字</div>
+    <input id="voiceInput" type="text" inputmode="decimal" placeholder="輸入或語音唸數字…" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="modal-btns">
+      <button id="modalCancel" onclick="closeVoice()">取消</button>
+      <button onclick="confirmVoice()">✓ 確認填入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let voiceTargetId=null;
+function openVoice(id,label){voiceTargetId=id;document.getElementById('voiceLabel').textContent='輸入：'+label;const vi=document.getElementById('voiceInput');vi.value='';document.getElementById('voiceModal').classList.add('show');setTimeout(()=>vi.focus(),150);}
+function closeVoice(){document.getElementById('voiceModal').classList.remove('show');document.getElementById('voiceInput').blur();voiceTargetId=null;}
+function confirmVoice(){if(!voiceTargetId)return;const raw=document.getElementById('voiceInput').value.trim();if(!raw){closeVoice();return;}const n=parseVoiceNumber(raw);document.getElementById(voiceTargetId).value=isNaN(n)?raw:n;closeVoice();}
+document.getElementById('voiceModal').addEventListener('click',function(e){if(e.target===this)closeVoice();});
+
+function val(id){return parseVoiceNumber(document.getElementById(id).value.trim());}
+function autoConvert(input){const n=parseVoiceNumber(input.value.trim());if(!isNaN(n))input.value=n;}
+
+function calculate(){
+  const errEl=document.getElementById('errMsg');
+  const resEl=document.getElementById('resultCard');
+  errEl.className='error-msg'; resEl.className='result-card';
+  const n1=val('n1'),e1=val('e1'),n2=val('n2'),e2=val('e2'),n3=val('n3'),e3=val('e3');
+  if([n1,e1,n2,e2,n3,e3].some(isNaN)){errEl.textContent='⚠ 請填入所有六個座標值';errEl.className='error-msg show';return;}
+  const a1=e2-e1,b1=n2-n1,c1=((e2*e2-e1*e1)+(n2*n2-n1*n1))/2;
+  const a2=e3-e2,b2=n3-n2,c2=((e3*e3-e2*e2)+(n3*n3-n2*n2))/2;
+  const det=a1*b2-a2*b1;
+  if(Math.abs(det)<1e-10){errEl.textContent='⚠ 三點共線，無法定圓';errEl.className='error-msg show';return;}
+  const cx=(c1*b2-c2*b1)/det,cy=(a1*c2-a2*c1)/det;
+  const r=Math.sqrt((cx-e1)**2+(cy-n1)**2);
+  document.getElementById('resN').textContent=cy.toFixed(4);
+  document.getElementById('resE').textContent=cx.toFixed(4);
+  document.getElementById('resR').textContent=r.toFixed(4)+' m';
+  document.getElementById('resD').textContent=(r*2).toFixed(4)+' m';
+  resEl.className='result-card show';
+  drawPreview(n1,e1,n2,e2,n3,e3,cy,cx,r);
+}
+
+function drawPreview(n1,e1,n2,e2,n3,e3,cn,ce,r){
+  const cvs=document.getElementById('cvs'),ctx=cvs.getContext('2d');
+  const W=cvs.width,H=cvs.height;ctx.clearRect(0,0,W,H);
+  const pts=[[e1,n1],[e2,n2],[e3,n3],[ce,cn]];
+  const allX=pts.map(p=>p[0]),allY=pts.map(p=>p[1]);
+  const minX=Math.min(...allX)-r,maxX=Math.max(...allX)+r;
+  const minY=Math.min(...allY)-r,maxY=Math.max(...allY)+r;
+  const pad=28,sc=Math.min((W-pad*2)/(maxX-minX||1),(H-pad*2)/(maxY-minY||1));
+  const tx=e=>(e-minX)*sc+pad,ty=n=>H-((n-minY)*sc+pad);
+  ctx.beginPath();ctx.arc(tx(ce),ty(cn),r*sc,0,Math.PI*2);
+  ctx.strokeStyle='rgba(0,212,170,0.55)';ctx.lineWidth=1.5;ctx.stroke();
+  [[e1,n1],[e2,n2],[e3,n3]].forEach(([ex,ny])=>{ctx.beginPath();ctx.moveTo(tx(ce),ty(cn));ctx.lineTo(tx(ex),ty(ny));ctx.strokeStyle='rgba(0,212,170,0.18)';ctx.lineWidth=1;ctx.stroke();});
+  [[e1,n1],[e2,n2],[e3,n3]].forEach(([ex,ny],i)=>{ctx.beginPath();ctx.arc(tx(ex),ty(ny),5,0,Math.PI*2);ctx.fillStyle=['#007bff','#f0a500','#e040fb'][i];ctx.fill();ctx.fillStyle='#e6edf3';ctx.font='11px Share Tech Mono,monospace';ctx.fillText(`P${i+1}`,tx(ex)+7,ty(ny)-4);});
+  ctx.beginPath();ctx.arc(tx(ce),ty(cn),5,0,Math.PI*2);ctx.fillStyle='#00d4aa';ctx.fill();
+  ctx.fillStyle='#00d4aa';ctx.font='bold 11px Share Tech Mono,monospace';ctx.fillText('O',tx(ce)+7,ty(cn)-4);
+}
+
+function copyResult(){
+  const n=document.getElementById('resN').textContent,e=document.getElementById('resE').textContent;
+  const r=document.getElementById('resR').textContent,d=document.getElementById('resD').textContent;
+  navigator.clipboard.writeText(`圓心 N=${n}  E=${e}  R=${r}  D=${d}`).then(()=>{
+    const btn=document.querySelector('.copy-btn');btn.textContent='✓ 已複製';
+    setTimeout(()=>btn.textContent='⎘ 複製結果',1800);
+  });
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')calculate();});
+
+function parseVoiceNumber(text){
+  let s=text.trim();
+  if(/^-?\d+(\.\d+)?$/.test(s))return parseFloat(s);
+  const m={'零':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'兩':2,'０':0,'１':1,'２':2,'３':3,'４':4,'５':5,'６':6,'７':7,'８':8,'９':9,'點':'.','負':'-','．':'.'};
+  let r='';
+  for(const ch of s){if(m[ch]!==undefined)r+=m[ch];else if(/[\d.\-]/.test(ch))r+=ch;}
+  const n=parseFloat(r);return isNaN(n)?NaN:n;
+}
+</script>
+</body>
+</html>
