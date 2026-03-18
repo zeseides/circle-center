@@ -364,26 +364,47 @@ function circleCenter(p1,p2,p3){
 }
 function parseMeasured(txt){
   const lines=txt.split('\n');stationInfo=null;const groups={};let firstLine=true;
+  const direct={};  // 直接圓心模式
+  let mode=null;    // 'circle3' or 'direct'
+
   for(const line of lines){
     const parts=line.trim().split(',');if(!parts[0]?.trim())continue;
     const name=parts[0].trim();
+    // 第一行永遠是測站
     if(firstLine){
       stationInfo={name,n:parts[1]?.trim()||'',e:parts[2]?.trim()||'',h:parts[3]?.trim()||''};
       firstLine=false;continue;
     }
-    const m=name.match(/^(\d+)-([1-4])$/);if(!m)continue;
-    const pid=parseInt(m[1]),s=parseInt(m[2]);
     const n=parseFloat(parts[1]),e=parseFloat(parts[2]),h=parseFloat(parts[3]);
     if(isNaN(n)||isNaN(e)||isNaN(h))continue;
-    if(!groups[pid])groups[pid]={pts:{},h4:null};
-    if(s<=3)groups[pid].pts[s]=[e,n];else if(s===4)groups[pid].h4=h;
+
+    // 判斷格式：數字-1~4 => 三點定圓模式
+    const m3=name.match(/^(\d+)-([1-4])$/);
+    if(m3){
+      mode='circle3';
+      const pid=parseInt(m3[1]),s=parseInt(m3[2]);
+      if(!groups[pid])groups[pid]={pts:{},h4:null};
+      if(s<=3)groups[pid].pts[s]=[e,n];else if(s===4)groups[pid].h4=h;
+      continue;
+    }
+    // 純數字 => 直接圓心模式
+    if(/^\d+$/.test(name)){
+      mode='direct';
+      const pid=parseInt(name);
+      direct[pid]={ce:e,cn:n,h,r:0};
+      continue;
+    }
   }
+
+  // 三點定圓
   const res={};
   for(const[pid,data]of Object.entries(groups)){
     const pts=data.pts;if(!pts[1]||!pts[2]||!pts[3])continue;
     const c=circleCenter(pts[1],pts[2],pts[3]);if(!c)continue;
     res[pid]={ce:c.cx,cn:c.cy,r:c.r,h:data.h4};
   }
+  // 直接圓心
+  for(const[pid,d]of Object.entries(direct)) res[pid]=d;
   return res;
 }
 function parseDesign(txt){
